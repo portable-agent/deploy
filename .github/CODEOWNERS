@@ -1,0 +1,3 @@
+* @portable-agent/maintainers
+/charts/ @portable-agent/backend @portable-agent/agent-runtime
+/.github/ @portable-agent/maintainers

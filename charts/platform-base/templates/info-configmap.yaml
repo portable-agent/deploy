@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: platform-base-info
+  labels:
+    {{- include "platform-base.labels" . | nindent 4 }}
+data:
+  ready: "true"
+  environment: {{ .Values.environment | quote }}

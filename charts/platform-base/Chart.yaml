@@ -1,0 +1,6 @@
+apiVersion: v2
+name: platform-base
+description: Минимальная основа окружения Portable Agent
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

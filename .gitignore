@@ -1,0 +1,6 @@
+.idea/
+.vscode/
+site/
+.tmp-site/
+*.tgz
+*.log

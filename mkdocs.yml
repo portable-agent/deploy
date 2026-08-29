@@ -1,0 +1,13 @@
+site_name: Portable Agent Deploy
+site_description: Доставка и тестовые окружения Portable Agent
+docs_dir: docs
+strict: true
+theme:
+  name: material
+nav:
+  - Главная: index.md
+  - Архитектура: architecture.md
+  - Разработка: development.md
+  - Эксплуатация: runbook.md
+  - Решения:
+      - Отдельный deploy-репозиторий: decisions/0001-deploy-repository.md

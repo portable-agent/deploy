@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  chart:
+    name: Helm and k3d quality gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: azure/setup-helm@v5.0.1
+        with:
+          version: v4.2.4
+      - name: Проверить Helm chart
+        shell: pwsh
+        run: ./scripts/check-chart.ps1
+      - name: Установить k3d
+        env:
+          K3D_VERSION: v5.9.0
+        run: |
+          curl -fsSLo /tmp/k3d-install.sh \
+            "https://raw.githubusercontent.com/k3d-io/k3d/${K3D_VERSION}/install.sh"
+          TAG="${K3D_VERSION}" bash /tmp/k3d-install.sh
+      - name: Проверить установку в k3d
+        shell: pwsh
+        run: ./scripts/smoke-k3d.ps1 -ClusterName "pa-${{ github.run_id }}"
+  docs:
+    uses: portable-agent/.github/.github/workflows/reusable-docs.yml@main

@@ -1,0 +1,2 @@
+Проверка установки:
+  kubectl -n {{ .Release.Namespace }} get configmap platform-base-info
