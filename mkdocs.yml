@@ -8,6 +8,8 @@ nav:
   - Главная: index.md
   - Архитектура: architecture.md
   - Разработка: development.md
+  - Новый сервис: new-service.md
   - Эксплуатация: runbook.md
   - Решения:
       - Отдельный deploy-репозиторий: decisions/0001-deploy-repository.md
+      - Платформа разработки: decisions/0002-developer-platform.md

@@ -1,6 +1,7 @@
 param(
     [string]$ClusterName = "portable-agent-smoke",
-    [string]$ChartPath = "charts/platform-base"
+    [string]$ChartPath = "charts/platform-base",
+    [string]$ServiceChartPath = "charts/service"
 )
 
 $ErrorActionPreference = "Stop"
@@ -49,7 +50,17 @@ try {
         throw "Smoke-проверка ожидала ready=true, получено: $ready"
     }
 
-    Write-Host "Helm chart успешно установлен и проверен в k3d."
+    & helm upgrade --install smoke-service $ServiceChartPath `
+        --kube-context $context `
+        --namespace portable-agent-smoke `
+        --values "$ServiceChartPath/tests/smoke-values.yaml" `
+        --wait
+    if ($LASTEXITCODE -ne 0) { throw "Не удалось установить общий service chart." }
+
+    & kubectl --context $context --namespace portable-agent-smoke rollout status deployment/smoke-service --timeout=90s
+    if ($LASTEXITCODE -ne 0) { throw "Deployment общего service chart не стал Ready." }
+
+    Write-Host "Базовый и общий service charts успешно установлены и проверены в k3d."
 }
 finally {
     if ($created) {

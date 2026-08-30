@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["image", "containerPort", "resources"],
+  "properties": {
+    "image": {
+      "type": "object",
+      "required": ["repository", "tag"],
+      "properties": {
+        "repository": {"type": "string", "minLength": 1},
+        "tag": {"type": "string", "minLength": 1},
+        "pullPolicy": {"enum": ["Always", "IfNotPresent", "Never"]}
+      }
+    },
+    "containerPort": {"type": "integer", "minimum": 1, "maximum": 65535},
+    "replicaCount": {"type": "integer", "minimum": 1},
+    "secretRefs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["env", "name", "key"],
+        "properties": {
+          "env": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]+$"},
+          "name": {"type": "string", "minLength": 1},
+          "key": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  }
+}

@@ -1,17 +1,18 @@
 # Deploy
 
-Репозиторий хранит Helm charts и локальный k3d smoke-тест Portable Agent. Здесь нет бизнес-кода,
-секретов и настроек реального production.
+Репозиторий хранит локальную инфраструктуру, общий Helm chart и GitOps-описание Portable Agent.
+Здесь нет бизнес-кода, секретов и настроек реального production.
 
 ## Текущий пакет
 
-Первый пакет проверяет только путь `Helm -> Kubernetes`:
+Платформа разработки включает:
 
-- `helm lint` проверяет chart;
-- `helm template` проверяет render;
-- временный k3d-кластер устанавливает chart;
-- smoke-тест читает контрольный ConfigMap;
-- созданный тестом кластер всегда удаляется.
+- Compose-профиль `core`: PostgreSQL, Redpanda, Keycloak, Temporal и OPA;
+- Compose-профиль `observe`: OpenTelemetry, Prometheus, Grafana, Tempo и Loki;
+- безопасный общий chart `charts/service`;
+- Argo CD bootstrap `charts/gitops`;
+- каталог окружений и генератор нового сервиса;
+- быстрые проверки в каждом PR и полный k3d smoke по расписанию.
 
 ## Требования
 
@@ -21,16 +22,32 @@
 - kubectl;
 - PowerShell 7.
 
-Проверка chart без кластера:
+Создай локальный файл настроек и запусти инфраструктуру:
 
 ```powershell
-pwsh ./scripts/check-chart.ps1
+Copy-Item .env.example .env
+pwsh ./scripts/start-local.ps1 -Observe
+```
+
+Файл `.env` локальный и не коммитится. Значения `dev` и `stage` должны приходить из secret
+manager, а не из Git.
+
+Все быстрые проверки:
+
+```powershell
+pwsh ./scripts/check-config.ps1
 ```
 
 Полная проверка:
 
 ```powershell
 pwsh ./scripts/smoke-k3d.ps1
+```
+
+Подготовить delivery-файлы нового сервиса:
+
+```powershell
+pwsh ./scripts/new-service.ps1 -Name sample-api -Image ghcr.io/portable-agent/sample-api -Port 8080
 ```
 
 Архитектура и следующий шаг описаны в [docs/index.md](docs/index.md). Правила для разработчиков и

@@ -1,0 +1,8 @@
+projectName: portable-agent
+source:
+  repoUrl: ""
+  revision: main
+  chartPath: charts/service
+servicesPath: environments
+environments: []
+destinationServer: https://kubernetes.default.svc

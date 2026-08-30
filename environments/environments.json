@@ -1,0 +1,9 @@
+{
+  "$schema": "./environments.schema.json",
+  "items": [
+    {"name": "local", "autoSync": true, "replicas": 1},
+    {"name": "dev", "autoSync": true, "replicas": 1},
+    {"name": "stage", "autoSync": false, "replicas": 2}
+  ]
+}
+
