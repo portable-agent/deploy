@@ -1,0 +1,79 @@
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  repository: ""
+  tag: ""
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+replicaCount: 1
+containerPort: 8080
+
+service:
+  enabled: true
+  type: ClusterIP
+  port: 80
+
+config: {}
+# Каждый элемент: {env: DATABASE_PASSWORD, name: service-secret, key: database-password}
+secretRefs: []
+extraEnv: []
+
+probes:
+  enabled: true
+  path: /actuator/health/readiness
+  livenessPath: /actuator/health/liveness
+  initialDelaySeconds: 10
+  periodSeconds: 10
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
+networkPolicy:
+  enabled: true
+  allowDns: true
+  ingressFrom: []
+  egressTo: []
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts: []
+  tls: []
+
+serviceMonitor:
+  enabled: false
+  path: /actuator/prometheus
+  interval: 30s
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+otel:
+  enabled: true
+  endpoint: http://otel-collector.observability.svc.cluster.local:4318
+
+podAnnotations: {}
+podLabels: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}

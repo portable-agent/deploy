@@ -1,0 +1,17 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: {{ .Values.projectName }}
+  namespace: argocd
+spec:
+  sourceRepos:
+    - {{ .Values.source.repoUrl | quote }}
+  destinations:
+    {{- range .Values.environments }}
+    - namespace: {{ printf "portable-agent-%s" .name | quote }}
+      server: {{ $.Values.destinationServer | quote }}
+    {{- end }}
+  clusterResourceWhitelist: []
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

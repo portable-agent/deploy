@@ -1,0 +1,8 @@
+source:
+  repoUrl: https://github.com/example/deploy.git
+  revision: main
+  chartPath: charts/service
+environments:
+  - {name: local, autoSync: true}
+  - {name: dev, autoSync: true}
+  - {name: stage, autoSync: false}

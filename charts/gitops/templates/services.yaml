@@ -1,0 +1,40 @@
+{{- range $environment := .Values.environments }}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: {{ $.Values.projectName }}-{{ $environment.name }}
+  namespace: argocd
+spec:
+  generators:
+    - git:
+        repoURL: {{ $.Values.source.repoUrl | quote }}
+        revision: {{ $.Values.source.revision | quote }}
+        directories:
+          - path: {{ printf "%s/%s/services/*" $.Values.servicesPath $environment.name | quote }}
+  template:
+    metadata:
+      name: '{{`{{path.basename}}`}}-{{ $environment.name }}'
+    spec:
+      project: {{ $.Values.projectName }}
+      sources:
+        - repoURL: {{ $.Values.source.repoUrl | quote }}
+          targetRevision: {{ $.Values.source.revision | quote }}
+          path: {{ $.Values.source.chartPath | quote }}
+          helm:
+            valueFiles:
+              - '$values/{{`{{path}}`}}/values.yaml'
+        - repoURL: {{ $.Values.source.repoUrl | quote }}
+          targetRevision: {{ $.Values.source.revision | quote }}
+          ref: values
+      destination:
+        server: {{ $.Values.destinationServer | quote }}
+        namespace: {{ printf "portable-agent-%s" $environment.name | quote }}
+      syncPolicy:
+        syncOptions: [CreateNamespace=true]
+        {{- if $environment.autoSync }}
+        automated:
+          prune: true
+          selfHeal: true
+        {{- end }}
+{{- end }}

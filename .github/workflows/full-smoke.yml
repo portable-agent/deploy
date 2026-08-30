@@ -1,0 +1,29 @@
+name: Full infrastructure smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "20 2 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  k3d:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: azure/setup-helm@v5.0.1
+        with:
+          version: v4.2.4
+      - name: Установить k3d
+        env:
+          K3D_VERSION: v5.9.0
+        run: |
+          curl -fsSLo /tmp/k3d-install.sh "https://raw.githubusercontent.com/k3d-io/k3d/${K3D_VERSION}/install.sh"
+          TAG="${K3D_VERSION}" bash /tmp/k3d-install.sh
+      - name: Запустить smoke
+        shell: pwsh
+        run: ./scripts/smoke-k3d.ps1 -ClusterName "pa-${{ github.run_id }}"
+

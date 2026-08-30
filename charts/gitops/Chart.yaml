@@ -1,0 +1,6 @@
+apiVersion: v2
+name: gitops
+description: Argo CD bootstrap для окружений Portable Agent
+type: application
+version: 0.1.0
+

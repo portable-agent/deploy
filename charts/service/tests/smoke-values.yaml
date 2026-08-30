@@ -1,0 +1,16 @@
+fullnameOverride: smoke-service
+image:
+  repository: registry.k8s.io/pause
+  tag: "3.10"
+containerPort: 8080
+service:
+  enabled: false
+probes:
+  enabled: false
+networkPolicy:
+  enabled: false
+otel:
+  enabled: false
+config:
+  READY: "true"
+

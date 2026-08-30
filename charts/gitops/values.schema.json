@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["projectName", "source", "environments"],
+  "properties": {
+    "projectName": {"type": "string", "pattern": "^[a-z0-9-]+$"},
+    "source": {
+      "type": "object",
+      "required": ["repoUrl", "revision", "chartPath"],
+      "properties": {
+        "repoUrl": {"type": "string", "minLength": 1},
+        "revision": {"type": "string", "minLength": 1},
+        "chartPath": {"type": "string", "minLength": 1}
+      }
+    },
+    "environments": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "autoSync"],
+        "properties": {
+          "name": {"type": "string", "pattern": "^[a-z0-9-]+$"},
+          "autoSync": {"type": "boolean"}
+        }
+      }
+    }
+  }
+}
