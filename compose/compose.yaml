@@ -12,6 +12,8 @@ services:
       KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?set KEYCLOAK_DB_PASSWORD}
       TEMPORAL_DB_USER: ${TEMPORAL_DB_USER:?set TEMPORAL_DB_USER}
       TEMPORAL_DB_PASSWORD: ${TEMPORAL_DB_PASSWORD:?set TEMPORAL_DB_PASSWORD}
+      ACTION_DB_USER: ${ACTION_DB_USER:?set ACTION_DB_USER}
+      ACTION_DB_PASSWORD: ${ACTION_DB_PASSWORD:?set ACTION_DB_PASSWORD}
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
@@ -56,7 +58,7 @@ services:
   keycloak:
     profiles: [core]
     image: ${KEYCLOAK_IMAGE:?set KEYCLOAK_IMAGE}
-    command: [start-dev, --health-enabled=true]
+    command: [start-dev, --health-enabled=true, --import-realm]
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
@@ -69,8 +71,20 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    volumes:
+      - ./keycloak/portable-agent-realm.json:/opt/keycloak/data/import/portable-agent-realm.json:ro
     ports:
       - "127.0.0.1:${KEYCLOAK_PORT:-8081}:8080"
+    healthcheck:
+      test:
+        [
+          CMD-SHELL,
+          "bash -c 'exec 3<>/dev/tcp/127.0.0.1/9000 && printf \"GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3 && grep -q \"200 OK\" <&3'",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
     networks: [platform]
 
   temporal-setup:
@@ -120,7 +134,7 @@ services:
     restart: on-failure:5
     entrypoint: [/bin/sh, /scripts/create-namespace.sh]
     environment:
-      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_ADDRESS: ${TEMPORAL_ADDRESS:?set TEMPORAL_ADDRESS}
       TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:?set TEMPORAL_NAMESPACE}
     volumes:
       - ./temporal/scripts:/scripts:ro
@@ -133,7 +147,7 @@ services:
     profiles: [core]
     image: ${TEMPORAL_UI_IMAGE:?set TEMPORAL_UI_IMAGE}
     environment:
-      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_ADDRESS: ${TEMPORAL_ADDRESS:?set TEMPORAL_ADDRESS}
       TEMPORAL_CORS_ORIGINS: http://localhost:3000
     depends_on:
       temporal:

@@ -32,6 +32,21 @@ pwsh ./scripts/start-local.ps1 -Observe
 Файл `.env` локальный и не коммитится. Значения `dev` и `stage` должны приходить из secret
 manager, а не из Git.
 
+Локальный Keycloak импортирует realm `portable-agent`. Публичный тестовый client
+`portable-agent-local` и пользователь `local-user` с паролем `local-user-change-me` существуют только
+в Compose fixture. JWT содержит тестовый `tenant_id`. PostgreSQL создаёт отдельную БД `actions` для
+Action Service.
+
+Если Docker Desktop на Windows принимает обычный TCP по имени `temporal`, но gRPC-клиенты получают
+`context deadline exceeded`, добавь в локальный `.env`:
+
+```dotenv
+TEMPORAL_ADDRESS=host.docker.internal:7233
+```
+
+Это только локальное переопределение. В CI и Linux Compose остаётся стандартный адрес
+`temporal:7233`; IP-адрес контейнера нигде не фиксируется.
+
 Все быстрые проверки:
 
 ```powershell

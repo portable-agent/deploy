@@ -1,4 +1,5 @@
 #!/bin/sh
+# Git keeps this script in LF format because it runs inside Linux containers.
 set -eu
 
 : "${TEMPORAL_ADDRESS:?TEMPORAL_ADDRESS is required}"

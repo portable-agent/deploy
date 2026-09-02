@@ -1,4 +1,5 @@
 #!/bin/sh
+# Git keeps this script in LF format because it runs inside Linux containers.
 set -eu
 
 : "${POSTGRES_SEEDS:?POSTGRES_SEEDS is required}"
