@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
-$linuxFiles = & git ls-files "*.sh"
+$linuxFiles = Get-ChildItem -Recurse -File -Filter "*.sh" | ForEach-Object { $_.FullName }
 foreach ($file in $linuxFiles) {
-    $bytes = [System.IO.File]::ReadAllBytes((Join-Path $PWD $file))
+    $bytes = [System.IO.File]::ReadAllBytes($file)
     if ($bytes -contains 13) {
         throw "Linux-скрипт содержит CRLF: $file"
     }
@@ -33,6 +33,9 @@ if ($composeText -notmatch '(?ms)^  keycloak:.*?^    healthcheck:') {
 $startScript = Get-Content -Raw -LiteralPath "scripts/start-local.ps1"
 if ($startScript -notmatch 'scale temporal-namespace=0' -or $startScript -notmatch 'run --rm --no-deps temporal-namespace') {
     throw "Temporal namespace должен запускаться отдельно от compose --wait."
+}
+if ($startScript -notmatch 'run --rm postgres-bootstrap') {
+    throw "PostgreSQL bootstrap должен выполняться и для существующего volume."
 }
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
     throw "Docker не найден. Запусти проверку в CI или установи Docker Desktop."

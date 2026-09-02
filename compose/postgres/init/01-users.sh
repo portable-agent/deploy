@@ -18,15 +18,18 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
   --set=action_password="$ACTION_DB_PASSWORD" <<-'SQL'
 SELECT format('CREATE ROLE %I LOGIN PASSWORD %L', :'keycloak_user', :'keycloak_password')
 WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'keycloak_user') \gexec
+SELECT format('ALTER ROLE %I WITH LOGIN PASSWORD %L', :'keycloak_user', :'keycloak_password') \gexec
 
 SELECT format('CREATE DATABASE keycloak OWNER %I', :'keycloak_user')
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'keycloak') \gexec
 
 SELECT format('CREATE ROLE %I LOGIN CREATEDB PASSWORD %L', :'temporal_user', :'temporal_password')
 WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'temporal_user') \gexec
+SELECT format('ALTER ROLE %I WITH LOGIN CREATEDB PASSWORD %L', :'temporal_user', :'temporal_password') \gexec
 
 SELECT format('CREATE ROLE %I LOGIN PASSWORD %L', :'action_user', :'action_password')
 WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'action_user') \gexec
+SELECT format('ALTER ROLE %I WITH LOGIN PASSWORD %L', :'action_user', :'action_password') \gexec
 
 SELECT format('CREATE DATABASE actions OWNER %I', :'action_user')
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'actions') \gexec
