@@ -37,6 +37,10 @@ manager, а не из Git.
 в Compose fixture. JWT содержит тестовый `tenant_id`. PostgreSQL создаёт отдельную БД `actions` для
 Action Service.
 
+После запуска скрипт получает настоящий JWT и сверяет пользователя и `tenant_id` с realm fixture.
+Если Keycloak volume создан старой версией fixture, запуск остановится с командой для явного
+пересоздания локальных данных.
+
 Если Docker Desktop на Windows принимает обычный TCP по имени `temporal`, но gRPC-клиенты получают
 `context deadline exceeded`, добавь в локальный `.env`:
 

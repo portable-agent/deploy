@@ -37,6 +37,13 @@ if ($startScript -notmatch 'scale temporal-namespace=0' -or $startScript -notmat
 if ($startScript -notmatch 'run --rm postgres-bootstrap') {
     throw "PostgreSQL bootstrap должен выполняться и для существующего volume."
 }
+if ($startScript -notmatch 'scripts/check-keycloak.ps1') {
+    throw "После запуска нужна runtime-проверка Keycloak fixture."
+}
+$keycloakCheck = Get-Content -Raw -LiteralPath "scripts/check-keycloak.ps1"
+if ($keycloakCheck -notmatch 'portable-agent-realm.json' -or $keycloakCheck -notmatch 'tenant_id') {
+    throw "Runtime-проверка Keycloak должна сверять JWT с realm fixture."
+}
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
     throw "Docker не найден. Запусти проверку в CI или установи Docker Desktop."
 }
