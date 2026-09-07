@@ -34,8 +34,9 @@ manager, а не из Git.
 
 Локальный Keycloak импортирует realm `portable-agent`. Публичный тестовый client
 `portable-agent-local` и пользователь `local-user` с паролем `local-user-change-me` существуют только
-в Compose fixture. JWT содержит тестовый `tenant_id`. PostgreSQL создаёт отдельную БД `actions` для
-Action Service.
+в Compose fixture. JWT содержит тестовый `tenant_id`, audience `calendar-mcp` и scope
+`calendar:write`, поэтому тем же токеном можно вызывать локальный Calendar MCP. PostgreSQL создаёт
+отдельную БД `actions` для Action Service.
 
 После запуска скрипт получает настоящий JWT и сверяет пользователя и `tenant_id` с realm fixture.
 Если Keycloak volume создан старой версией fixture, запуск остановится с командой для явного

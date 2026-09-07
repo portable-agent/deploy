@@ -5,7 +5,44 @@
   "sslRequired": "external",
   "registrationAllowed": false,
   "resetPasswordAllowed": false,
+  "clientScopes": [
+    {
+      "name": "basic",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "sub",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-sub-mapper",
+          "consentRequired": false,
+          "config": {
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "calendar:write",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
+    }
+  ],
   "clients": [
+    {
+      "clientId": "calendar-mcp",
+      "name": "Calendar MCP Resource Server",
+      "enabled": true,
+      "bearerOnly": true,
+      "protocol": "openid-connect"
+    },
     {
       "clientId": "portable-agent-local",
       "name": "Portable Agent Local Test",
@@ -15,6 +52,7 @@
       "directAccessGrantsEnabled": true,
       "serviceAccountsEnabled": false,
       "protocol": "openid-connect",
+      "defaultClientScopes": ["basic", "calendar:write"],
       "protocolMappers": [
         {
           "name": "tenant-id",
@@ -29,6 +67,18 @@
             "id.token.claim": "true",
             "access.token.claim": "true",
             "userinfo.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
+          "name": "calendar-mcp-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "calendar-mcp",
+            "id.token.claim": "false",
+            "access.token.claim": "true",
             "introspection.token.claim": "true"
           }
         }
