@@ -19,7 +19,10 @@ try {
     $payload = $tokenResponse.access_token.Split('.')[1].Replace('-', '+').Replace('_', '/')
     $payload += '=' * ((4 - $payload.Length % 4) % 4)
     $claims = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($payload)) | ConvertFrom-Json
-    if ($claims.sub -ne $user.id -or $claims.tenant_id -ne $tenantId) {
+    $audiences = @($claims.aud)
+    $scopes = @($claims.scope -split ' ')
+    if ($claims.sub -ne $user.id -or $claims.tenant_id -ne $tenantId `
+        -or $audiences -notcontains "calendar-mcp" -or $scopes -notcontains "calendar:write") {
         throw "JWT claims не совпадают с локальным fixture."
     }
 } catch {
