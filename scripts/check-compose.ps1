@@ -22,9 +22,26 @@ $calendarClient = $realm.clients | Where-Object clientId -eq "calendar-mcp"
 if (-not $calendarClient -or -not $calendarClient.bearerOnly) {
     throw "Нет resource server client calendar-mcp."
 }
+$gatewayClient = $realm.clients | Where-Object clientId -eq "mcp-gateway"
+if (-not $gatewayClient -or -not $gatewayClient.bearerOnly) {
+    throw "Нет resource server client mcp-gateway."
+}
+$actionClient = $realm.clients | Where-Object clientId -eq "action-service"
+if (-not $actionClient -or -not $actionClient.serviceAccountsEnabled -or $actionClient.publicClient) {
+    throw "Нет confidential service account client action-service."
+}
+$exampleTenant = (Get-Content -LiteralPath ".env.example" | Where-Object { $_ -match '^ACTION_SERVICE_TENANT_ID=' }).Split('=', 2)[1]
+if ($exampleTenant -notmatch '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$') {
+    throw "Локальный tenant должен быть RFC-совместимым UUID."
+}
 $calendarScope = $realm.clientScopes | Where-Object name -eq "calendar:write"
 if (-not $calendarScope -or $localClient.defaultClientScopes -notcontains "calendar:write") {
     throw "Локальный JWT не получает scope calendar:write."
+}
+$gatewayScope = $realm.clientScopes | Where-Object name -eq "mcp:call"
+if (-not $gatewayScope -or $actionClient.defaultClientScopes -notcontains "mcp:call" `
+    -or $actionClient.defaultClientScopes -notcontains "calendar:write") {
+    throw "Service token action-service не получает нужные scopes."
 }
 $audienceMapper = $localClient.protocolMappers | Where-Object { $_.config.'included.client.audience' -eq "calendar-mcp" }
 if (-not $audienceMapper) {
@@ -34,6 +51,12 @@ $tenantMapper = $localClient.protocolMappers | Where-Object { $_.config.'claim.n
 if (-not $tenantMapper) {
     throw "Локальный JWT не содержит tenant_id mapper."
 }
+$actionTenantMapper = $actionClient.protocolMappers | Where-Object { $_.config.'claim.name' -eq "tenant_id" }
+$actionAudiences = @($actionClient.protocolMappers | ForEach-Object { $_.config.'included.client.audience' })
+if (-not $actionTenantMapper -or $actionAudiences -notcontains "mcp-gateway" `
+    -or $actionAudiences -notcontains "calendar-mcp") {
+    throw "Service token action-service не содержит tenant_id и обе audience."
+}
 $localUser = $realm.users | Where-Object username -eq "local-user"
 if (-not $localUser.email -or -not $localUser.emailVerified) {
     throw "Профиль local-user не готов для входа."
@@ -41,6 +64,23 @@ if (-not $localUser.email -or -not $localUser.emailVerified) {
 $composeText = Get-Content -Raw -LiteralPath "compose/compose.yaml"
 if ($composeText -notmatch '(?ms)^  keycloak:.*?^    healthcheck:') {
     throw "У Keycloak нет readiness healthcheck."
+}
+foreach ($service in @("action-service", "mcp-gateway", "calendar-mcp")) {
+    if ($composeText -notmatch "(?m)^  $([regex]::Escape($service)):") {
+        throw "В Compose нет приложения $service."
+    }
+}
+if ($composeText -notmatch '(?ms)^  action-service:.*?MCP_GATEWAY_URL: http://mcp-gateway:8080' `
+    -or $composeText -notmatch '(?ms)^  mcp-gateway:.*?http://calendar-mcp:8080/mcp') {
+    throw "Compose не связывает Action Service с MCP Gateway и Calendar MCP по именам сервисов."
+}
+if ($composeText -notmatch 'TEMPORAL_ADMIN_ADDRESS:-temporal:7233') {
+    throw "Portable Compose должен обращаться к Temporal по имени сервиса."
+}
+$windowsOverride = Get-Content -Raw -LiteralPath "compose/windows.local.yaml"
+if ($windowsOverride -notmatch 'host.docker.internal:\$\{TEMPORAL_PORT:-7233\}' `
+    -or $windowsOverride -notmatch 'host.docker.internal:host-gateway') {
+    throw "Windows override должен обращаться к опубликованному Temporal port."
 }
 $startScript = Get-Content -Raw -LiteralPath "scripts/start-local.ps1"
 if ($startScript -notmatch 'scale temporal-namespace=0' -or $startScript -notmatch 'run --rm --no-deps temporal-namespace') {
@@ -52,6 +92,18 @@ if ($startScript -notmatch 'run --rm postgres-bootstrap') {
 if ($startScript -notmatch 'scripts/check-keycloak.ps1') {
     throw "После запуска нужна runtime-проверка Keycloak fixture."
 }
+if ($startScript -notmatch '\[switch\]\$Apps' -or $startScript -notmatch '"apps"') {
+    throw "start-local должен уметь запускать приложения через -Apps."
+}
+if ($startScript -notmatch 'compose/apps.local.yaml' -or $startScript -notmatch 'up -d --build --wait') {
+    throw "Локальные приложения должны собираться из соседних репозиториев."
+}
+$appsOverride = Get-Content -Raw -LiteralPath "compose/apps.local.yaml"
+foreach ($image in @("portable-agent/action-service:local", "portable-agent/mcp-gateway:local", "portable-agent/calendar-mcp:local")) {
+    if ($appsOverride -notmatch [regex]::Escape($image)) {
+        throw "Local override не задаёт отдельный image tag $image."
+    }
+}
 $keycloakCheck = Get-Content -Raw -LiteralPath "scripts/check-keycloak.ps1"
 if ($keycloakCheck -notmatch 'portable-agent-realm.json' `
     -or $keycloakCheck -notmatch 'tenant_id' `
@@ -62,7 +114,8 @@ if ($keycloakCheck -notmatch 'portable-agent-realm.json' `
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
     throw "Docker не найден. Запусти проверку в CI или установи Docker Desktop."
 }
-& docker compose --env-file .env.example --env-file config/versions.env -f compose/compose.yaml --profile core --profile observe config --quiet
+& docker compose --env-file .env.example --env-file config/versions.env -f compose/compose.yaml `
+    -f compose/apps.local.yaml --profile core --profile observe --profile apps config --quiet
 if ($LASTEXITCODE -ne 0) { throw "Compose config содержит ошибку." }
 Write-Host "Compose config прошёл проверку."
 

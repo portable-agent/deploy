@@ -8,6 +8,7 @@
 Платформа разработки включает:
 
 - Compose-профиль `core`: PostgreSQL, Redpanda, Keycloak, Temporal и OPA;
+- Compose-профиль `apps`: Action Service, MCP Gateway и Calendar MCP;
 - Compose-профиль `observe`: OpenTelemetry, Prometheus, Grafana, Tempo и Loki;
 - безопасный общий chart `charts/service`;
 - Argo CD bootstrap `charts/gitops`;
@@ -29,28 +30,44 @@ Copy-Item .env.example .env
 pwsh ./scripts/start-local.ps1 -Observe
 ```
 
+Чтобы поднять проверяемый путь `Action → Gateway → Calendar`, используй:
+
+```powershell
+pwsh ./scripts/start-local.ps1 -Apps
+pwsh ./scripts/check-apps.ps1
+```
+
+`check-apps.ps1` создаёт и подтверждает тестовое действие, ждёт Temporal workflow и проверяет,
+что Calendar MCP сохранил ровно одно событие с тем же `eventId`.
+
+`-Apps` собирает образы из соседних локальных репозиториев через `compose/apps.local.yaml`. Пути можно
+переопределить переменными `ACTION_SERVICE_CONTEXT`, `MCP_GATEWAY_CONTEXT` и
+`CALENDAR_MCP_CONTEXT`; вход в GHCR для локального запуска не нужен. По умолчанию Action API доступен
+на `http://localhost:18081`, MCP Gateway — на `http://localhost:18083`, а Calendar MCP — на
+`http://localhost:18082`.
+
 Файл `.env` локальный и не коммитится. Значения `dev` и `stage` должны приходить из secret
 manager, а не из Git.
 
 Локальный Keycloak импортирует realm `portable-agent`. Публичный тестовый client
 `portable-agent-local` и пользователь `local-user` с паролем `local-user-change-me` существуют только
-в Compose fixture. JWT содержит тестовый `tenant_id`, audience `calendar-mcp` и scope
-`calendar:write`, поэтому тем же токеном можно вызывать локальный Calendar MCP. PostgreSQL создаёт
-отдельную БД `actions` для Action Service.
+в Compose fixture. Отдельный confidential client `action-service` выдаёт worker служебный токен с
+`tenant_id`, audience `mcp-gateway` и `calendar-mcp`, scopes `mcp:call` и `calendar:write`. Значения
+локального секрета и tenant приходят из `.env`, а не зашиты в image. PostgreSQL создаёт отдельную БД
+`actions` для Action Service.
+
+Проверочный API Calendar MCP включён только в локальном профиле `apps`, привязан к loopback-порту и
+защищён `CALENDAR_TEST_API_KEY`. Хранилище fake-calendar пока находится в памяти: перезапуск контейнера
+очищает созданные тестовые встречи.
 
 После запуска скрипт получает настоящий JWT и сверяет пользователя и `tenant_id` с realm fixture.
 Если Keycloak volume создан старой версией fixture, запуск остановится с командой для явного
 пересоздания локальных данных.
 
-Если Docker Desktop на Windows принимает обычный TCP по имени `temporal`, но gRPC-клиенты получают
-`context deadline exceeded`, добавь в локальный `.env`:
-
-```dotenv
-TEMPORAL_ADDRESS=host.docker.internal:7233
-```
-
-Это только локальное переопределение. В CI и Linux Compose остаётся стандартный адрес
-`temporal:7233`; IP-адрес контейнера нигде не фиксируется.
+Worker, Temporal UI и Linux Compose используют внутренний адрес `temporal:7233`. На Windows скрипт
+подключает `compose/windows.local.yaml`: CLI создания namespace идёт через опубликованный порт,
+потому что Docker Desktop иногда не проводит этот gRPC по имени сервиса. Адрес можно переопределить
+переменной `TEMPORAL_ADMIN_ADDRESS`.
 
 Все быстрые проверки:
 
