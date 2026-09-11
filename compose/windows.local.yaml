@@ -1,0 +1,6 @@
+services:
+  temporal-namespace:
+    environment:
+      TEMPORAL_ADDRESS: ${TEMPORAL_ADMIN_ADDRESS:-host.docker.internal:${TEMPORAL_PORT:-7233}}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

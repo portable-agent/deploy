@@ -1,0 +1,18 @@
+services:
+  action-service:
+    image: portable-agent/action-service:local
+    build:
+      context: ${ACTION_SERVICE_CONTEXT:-../../portable-agent-action-service}
+    pull_policy: build
+
+  mcp-gateway:
+    image: portable-agent/mcp-gateway:local
+    build:
+      context: ${MCP_GATEWAY_CONTEXT:-../../portable-agent-mcp-gateway}
+    pull_policy: build
+
+  calendar-mcp:
+    image: portable-agent/calendar-mcp:local
+    build:
+      context: ${CALENDAR_MCP_CONTEXT:-../../portable-agent-calendar-mcp}
+    pull_policy: build

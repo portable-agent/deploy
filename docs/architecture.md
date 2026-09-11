@@ -19,3 +19,27 @@ services/catalog.json -> environments/<env>/services/<name>/values.yaml
 Локальная среда работает через Compose и использует те же классы зависимостей, что будущий
 кластер. Полный smoke создаёт только временный k3d-кластер и всегда удаляет лишь созданный им
 кластер.
+
+## Локальный execution slice
+
+```mermaid
+sequenceDiagram
+    participant Action as Action Service
+    participant Keycloak
+    participant Gateway as MCP Gateway
+    participant Calendar as Calendar MCP
+
+    Action->>Keycloak: client_credentials
+    Keycloak-->>Action: tenant + две audience + два scope
+    Action->>Gateway: POST /api/v1/calls
+    Gateway->>Gateway: JWT + allowlist
+    Gateway->>Calendar: tools/call + тот же JWT
+    Calendar->>Calendar: JWT + tenant + request_key
+    Calendar-->>Action: eventId
+```
+
+Canonical issuer локального realm доступен хосту через `localhost`. Контейнеры загружают JWKS по
+внутреннему имени `keycloak`, поэтому проверка токена не зависит от DNS хоста. `start-local -Apps`
+сначала поднимает зависимости и создаёт Temporal namespace, затем собирает и запускает приложения.
+Этот срез начинается с уже сохранённого action; разбор текста через Agent Runtime подключается
+отдельным этапом.
