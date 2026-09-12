@@ -24,11 +24,16 @@ services/catalog.json -> environments/<env>/services/<name>/values.yaml
 
 ```mermaid
 sequenceDiagram
+    participant User as Пользователь
     participant Action as Action Service
     participant Keycloak
     participant Gateway as MCP Gateway
     participant Calendar as Calendar MCP
 
+    User->>Keycloak: логин
+    Keycloak-->>User: tenant + audience action-service
+    User->>Action: предложить и подтвердить действие
+    Action->>Action: JWT issuer + audience + tenant
     Action->>Keycloak: client_credentials
     Keycloak-->>Action: tenant + две audience + два scope
     Action->>Gateway: POST /api/v1/calls

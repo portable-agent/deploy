@@ -43,9 +43,9 @@ if (-not $gatewayScope -or $actionClient.defaultClientScopes -notcontains "mcp:c
     -or $actionClient.defaultClientScopes -notcontains "calendar:write") {
     throw "Service token action-service не получает нужные scopes."
 }
-$audienceMapper = $localClient.protocolMappers | Where-Object { $_.config.'included.client.audience' -eq "calendar-mcp" }
-if (-not $audienceMapper) {
-    throw "Локальный JWT не получает audience calendar-mcp."
+$localAudiences = @($localClient.protocolMappers | ForEach-Object { $_.config.'included.client.audience' })
+if ($localAudiences -notcontains "action-service" -or $localAudiences -notcontains "calendar-mcp") {
+    throw "Локальный JWT не получает audience action-service и calendar-mcp."
 }
 $tenantMapper = $localClient.protocolMappers | Where-Object { $_.config.'claim.name' -eq "tenant_id" }
 if (-not $tenantMapper) {
@@ -71,6 +71,7 @@ foreach ($service in @("action-service", "mcp-gateway", "calendar-mcp")) {
     }
 }
 if ($composeText -notmatch '(?ms)^  action-service:.*?MCP_GATEWAY_URL: http://mcp-gateway:8080' `
+    -or $composeText -notmatch '(?ms)^  action-service:.*?OIDC_AUDIENCE: action-service' `
     -or $composeText -notmatch '(?ms)^  mcp-gateway:.*?http://calendar-mcp:8080/mcp') {
     throw "Compose не связывает Action Service с MCP Gateway и Calendar MCP по именам сервисов."
 }

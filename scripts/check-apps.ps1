@@ -12,6 +12,19 @@ function Get-LocalSetting([string]$Name) {
     return $value
 }
 
+function Test-SameDateTime([string]$Actual, [string]$Expected) {
+    try {
+        $style = [Globalization.DateTimeStyles]::RoundtripKind
+        $culture = [Globalization.CultureInfo]::InvariantCulture
+        $actualDate = [DateTimeOffset]::Parse($Actual, $culture, $style)
+        $expectedDate = [DateTimeOffset]::Parse($Expected, $culture, $style)
+        return $actualDate.UtcDateTime -eq $expectedDate.UtcDateTime `
+            -and $actualDate.Offset -eq $expectedDate.Offset
+    } catch {
+        return $false
+    }
+}
+
 $realm = Get-Content -Raw -LiteralPath "compose/keycloak/portable-agent-realm.json" | ConvertFrom-Json
 $client = $realm.clients | Where-Object clientId -eq "portable-agent-local"
 $user = $realm.users | Where-Object username -eq "local-user"
@@ -58,6 +71,11 @@ do {
 if ($saved.status -ne "SUCCEEDED") {
     throw "Action $($action.id) не выполнен за $TimeoutSeconds секунд: $($saved.status)."
 }
+if (-not (Test-SameDateTime $saved.payload.startAt $payload.startAt) `
+    -or -not (Test-SameDateTime $saved.payload.endAt $payload.endAt) `
+    -or $saved.payload.timeZone -ne $payload.timeZone) {
+    throw "Action Service изменил время или часовой пояс подтверждённого payload."
+}
 
 $eventResponse = Invoke-RestMethod -Method Get -Uri "$calendarUrl/test/events?requestKey=$requestKey" `
     -Headers @{ "X-Test-Key" = Get-LocalSetting "CALENDAR_TEST_API_KEY" }
@@ -67,7 +85,8 @@ $attendeesMatch = $events.Count -eq 1 `
     -and @(Compare-Object @($event.attendees) @($payload.attendees)).Count -eq 0
 if ($events.Count -ne 1 -or $event.eventId -ne $saved.result.eventId `
     -or $event.requestKey -ne $requestKey -or $event.title -ne $payload.title `
-    -or $event.startAt -ne $payload.startAt -or $event.endAt -ne $payload.endAt `
+    -or -not (Test-SameDateTime $event.startAt $payload.startAt) `
+    -or -not (Test-SameDateTime $event.endAt $payload.endAt) `
     -or $event.timeZone -ne $payload.timeZone -or $event.description -ne $payload.description `
     -or -not $attendeesMatch) {
     throw "Calendar MCP не сохранил ожидаемое событие."

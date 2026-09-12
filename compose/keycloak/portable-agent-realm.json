@@ -136,6 +136,18 @@
           }
         },
         {
+          "name": "action-service-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "action-service",
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
           "name": "calendar-mcp-audience",
           "protocol": "openid-connect",
           "protocolMapper": "oidc-audience-mapper",
