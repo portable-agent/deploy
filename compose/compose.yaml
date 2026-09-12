@@ -256,6 +256,7 @@ services:
       DATABASE_USER: ${ACTION_DB_USER:?set ACTION_DB_USER}
       DATABASE_PASSWORD: ${ACTION_DB_PASSWORD:?set ACTION_DB_PASSWORD}
       OIDC_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8081}/realms/portable-agent
+      OIDC_AUDIENCE: action-service
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/portable-agent/protocol/openid-connect/certs
       TEMPORAL_TARGET: temporal:7233
       TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:?set TEMPORAL_NAMESPACE}

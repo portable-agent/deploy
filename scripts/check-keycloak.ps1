@@ -26,6 +26,7 @@ try {
     $audiences = @($claims.aud)
     $scopes = @($claims.scope -split ' ')
     if ($claims.sub -ne $user.id -or $claims.tenant_id -ne $ExpectedTenant `
+        -or $audiences -notcontains "action-service" `
         -or $audiences -notcontains "calendar-mcp" -or $scopes -notcontains "calendar:write") {
         throw "JWT claims не совпадают с локальным fixture."
     }
