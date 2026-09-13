@@ -60,13 +60,19 @@ $proposalRequest = @{
 $proposalResult = Invoke-RestMethod -Method Post -Uri "$agentUrl/api/v1/proposals" `
     -Headers $headers -ContentType "application/json" -Body $proposalRequest
 $proposal = $proposalResult.proposal
-if (-not $proposal -or $proposalResult.clarification -or -not $proposal.requiresApproval `
-    -or $proposal.kind -ne "calendar.create_event" -or $proposal.connector -ne "fake-calendar" `
-    -or $proposal.payload.title -ne $payload.title `
-    -or -not (Test-SameDateTime $proposal.payload.startAt $payload.startAt) `
-    -or -not (Test-SameDateTime $proposal.payload.endAt $payload.endAt) `
-    -or $proposal.payload.timeZone -ne $payload.timeZone) {
-    throw "Agent Runtime не создал ожидаемое предложение."
+$proposalErrors = @()
+if (-not $proposal) { $proposalErrors += "proposal" }
+if ($proposalResult.clarification) { $proposalErrors += "clarification" }
+if (-not $proposal.requiresApproval) { $proposalErrors += "requiresApproval" }
+if ($proposal.kind -ne "calendar.create_event") { $proposalErrors += "kind" }
+if ($proposal.connector -ne "fake-calendar") { $proposalErrors += "connector" }
+if ($proposal.payload.title -ne $payload.title) { $proposalErrors += "title" }
+if (-not (Test-SameDateTime $proposal.payload.startAt $payload.startAt)) { $proposalErrors += "startAt" }
+if (-not (Test-SameDateTime $proposal.payload.endAt $payload.endAt)) { $proposalErrors += "endAt" }
+if ($proposal.payload.timeZone -ne $payload.timeZone) { $proposalErrors += "timeZone" }
+if ($proposalErrors.Count -gt 0) {
+    $safeResponse = $proposalResult | ConvertTo-Json -Depth 8 -Compress
+    throw "Agent Runtime proposal не прошёл проверки: $($proposalErrors -join ', '). Ответ: $safeResponse"
 }
 $body = @{
     kind = $proposal.kind
