@@ -25,14 +25,18 @@ services/catalog.json -> environments/<env>/services/<name>/values.yaml
 ```mermaid
 sequenceDiagram
     participant User as Пользователь
+    participant Agent as Agent Runtime
     participant Action as Action Service
     participant Keycloak
     participant Gateway as MCP Gateway
     participant Calendar as Calendar MCP
 
     User->>Keycloak: логин
-    Keycloak-->>User: tenant + audience action-service
-    User->>Action: предложить и подтвердить действие
+    Keycloak-->>User: tenant + audience agent-runtime и action-service
+    User->>Agent: текст + безопасный context + JWT
+    Agent->>Agent: JWT + подготовка ActionPlan
+    Agent-->>User: proposal требует подтверждения
+    User->>Action: создать и подтвердить действие
     Action->>Action: JWT issuer + audience + tenant
     Action->>Keycloak: client_credentials
     Keycloak-->>Action: tenant + две audience + два scope
@@ -46,5 +50,5 @@ sequenceDiagram
 Canonical issuer локального realm доступен хосту через `localhost`. Контейнеры загружают JWKS по
 внутреннему имени `keycloak`, поэтому проверка токена не зависит от DNS хоста. `start-local -Apps`
 сначала поднимает зависимости и создаёт Temporal namespace, затем собирает и запускает приложения.
-Этот срез начинается с уже сохранённого action; разбор текста через Agent Runtime подключается
-отдельным этапом.
+Agent Runtime не исполняет и не сохраняет действие. Он создаёт предложение по контракту `2.1.0`;
+после подтверждения Action Service становится источником состояния, аудита и Temporal workflow.

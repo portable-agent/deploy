@@ -1,4 +1,10 @@
 services:
+  agent-runtime:
+    image: portable-agent/agent-runtime:local
+    build:
+      context: ${AGENT_RUNTIME_CONTEXT:-../../portable-agent-agent-runtime}
+    pull_policy: build
+
   action-service:
     image: portable-agent/action-service:local
     build:

@@ -26,9 +26,10 @@ try {
     $audiences = @($claims.aud)
     $scopes = @($claims.scope -split ' ')
     if ($claims.sub -ne $user.id -or $claims.tenant_id -ne $ExpectedTenant `
+        -or $audiences -notcontains "agent-runtime" `
         -or $audiences -notcontains "action-service" `
         -or $audiences -notcontains "calendar-mcp" -or $scopes -notcontains "calendar:write") {
-        throw "JWT claims не совпадают с локальным fixture."
+        throw "JWT claims пользователя не содержат tenant и audience сервисов."
     }
 
     $serviceToken = Invoke-RestMethod -Method Post `

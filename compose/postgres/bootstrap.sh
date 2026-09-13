@@ -15,4 +15,4 @@ until pg_isready --host postgres --username "$POSTGRES_USER" --dbname "$POSTGRES
   sleep 2
 done
 
-exec /scripts/init/01-users.sh
+exec /bin/sh /scripts/init/01-users.sh
