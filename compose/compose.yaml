@@ -197,6 +197,33 @@ services:
       retries: 20
     networks: [platform]
 
+  agent-runtime:
+    profiles: [apps]
+    image: ${AGENT_RUNTIME_IMAGE:?set AGENT_RUNTIME_IMAGE}
+    environment:
+      AGENT_OIDC_ISSUER_URL: http://localhost:${KEYCLOAK_PORT:-8081}/realms/portable-agent
+      AGENT_OIDC_JWKS_URL: http://keycloak:8080/realms/portable-agent/protocol/openid-connect/certs
+      AGENT_OIDC_AUDIENCE: agent-runtime
+      AGENT_ALLOWED_HOSTS: '["agent-runtime","localhost","127.0.0.1"]'
+      AGENT_DOCS_ENABLED: "false"
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${AGENT_RUNTIME_PORT:-18080}:8080"
+    healthcheck:
+      test:
+        [
+          CMD,
+          python,
+          -c,
+          "import urllib.request; urllib.request.urlopen('http://localhost:8080/health/live')",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    networks: [platform]
+
   calendar-mcp:
     profiles: [apps]
     image: ${CALENDAR_MCP_IMAGE:?set CALENDAR_MCP_IMAGE}

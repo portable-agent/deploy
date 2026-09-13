@@ -30,6 +30,7 @@ $client = $realm.clients | Where-Object clientId -eq "portable-agent-local"
 $user = $realm.users | Where-Object username -eq "local-user"
 $password = ($user.credentials | Where-Object type -eq "password").value
 $keycloakUrl = "http://localhost:$(Get-LocalSetting 'KEYCLOAK_PORT')"
+$agentUrl = "http://localhost:$(Get-LocalSetting 'AGENT_RUNTIME_PORT')"
 $actionUrl = "http://localhost:$(Get-LocalSetting 'ACTION_SERVICE_PORT')"
 $calendarUrl = "http://localhost:$(Get-LocalSetting 'CALENDAR_MCP_PORT')"
 
@@ -48,14 +49,30 @@ $payload = @{
     startAt = "2026-09-12T10:00:00+03:00"
     endAt = "2026-09-12T10:30:00+03:00"
     timeZone = "Europe/Moscow"
-    description = "Action to MCP acceptance"
-    attendees = @("person@example.test")
+}
+$proposalRequest = @{
+    text = "Создай встречу `"$($payload.title)`" с $($payload.startAt) до $($payload.endAt)"
+    context = @{
+        timeZone = $payload.timeZone
+        availableConnectors = @("fake-calendar")
+    }
+} | ConvertTo-Json -Depth 5
+$proposalResult = Invoke-RestMethod -Method Post -Uri "$agentUrl/api/v1/proposals" `
+    -Headers $headers -ContentType "application/json" -Body $proposalRequest
+$proposal = $proposalResult.proposal
+if (-not $proposal -or $proposalResult.clarification -or -not $proposal.requiresApproval `
+    -or $proposal.kind -ne "calendar.create_event" -or $proposal.connector -ne "fake-calendar" `
+    -or $proposal.payload.title -ne $payload.title `
+    -or -not (Test-SameDateTime $proposal.payload.startAt $payload.startAt) `
+    -or -not (Test-SameDateTime $proposal.payload.endAt $payload.endAt) `
+    -or $proposal.payload.timeZone -ne $payload.timeZone) {
+    throw "Agent Runtime не создал ожидаемое предложение."
 }
 $body = @{
-    kind = "calendar.create_event"
-    connector = "fake-calendar"
+    kind = $proposal.kind
+    connector = $proposal.connector
     requestKey = $requestKey
-    payload = $payload
+    payload = $proposal.payload
 } | ConvertTo-Json -Depth 5
 $action = Invoke-RestMethod -Method Post -Uri "$actionUrl/api/v1/actions" `
     -Headers $headers -ContentType "application/json" -Body $body
@@ -81,15 +98,12 @@ $eventResponse = Invoke-RestMethod -Method Get -Uri "$calendarUrl/test/events?re
     -Headers @{ "X-Test-Key" = Get-LocalSetting "CALENDAR_TEST_API_KEY" }
 $events = @($eventResponse.events)
 $event = $events[0]
-$attendeesMatch = $events.Count -eq 1 `
-    -and @(Compare-Object @($event.attendees) @($payload.attendees)).Count -eq 0
 if ($events.Count -ne 1 -or $event.eventId -ne $saved.result.eventId `
     -or $event.requestKey -ne $requestKey -or $event.title -ne $payload.title `
     -or -not (Test-SameDateTime $event.startAt $payload.startAt) `
     -or -not (Test-SameDateTime $event.endAt $payload.endAt) `
-    -or $event.timeZone -ne $payload.timeZone -or $event.description -ne $payload.description `
-    -or -not $attendeesMatch) {
+    -or $event.timeZone -ne $payload.timeZone) {
     throw "Calendar MCP не сохранил ожидаемое событие."
 }
 
-Write-Host "Backend-срез работает: action $($action.id), event $($saved.result.eventId)."
+Write-Host "Полный срез работает: proposal $($proposal.proposalId), action $($action.id), event $($saved.result.eventId)."

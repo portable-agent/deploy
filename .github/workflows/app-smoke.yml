@@ -1,0 +1,84 @@
+name: Full application smoke
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/app-smoke.yml"
+      - ".env.example"
+      - "compose/**"
+      - "config/versions.env"
+      - "scripts/check-apps.ps1"
+      - "scripts/check-compose.ps1"
+      - "scripts/check-keycloak.ps1"
+      - "scripts/start-local.ps1"
+      - "scripts/stop-local.ps1"
+
+permissions:
+  contents: read
+
+jobs:
+  apps:
+    name: Agent to Calendar acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      COMPOSE_PROJECT_NAME: pa-app-${{ github.run_id }}-${{ github.run_attempt }}
+      AGENT_RUNTIME_CONTEXT: ${{ github.workspace }}/repos/agent-runtime
+      ACTION_SERVICE_CONTEXT: ${{ github.workspace }}/repos/action-service
+      MCP_GATEWAY_CONTEXT: ${{ github.workspace }}/repos/mcp-gateway
+      CALENDAR_MCP_CONTEXT: ${{ github.workspace }}/repos/calendar-mcp
+    steps:
+      - name: Получить deploy
+        uses: actions/checkout@v7
+
+      - name: Прочитать версии приложений
+        id: versions
+        shell: pwsh
+        run: |
+          $versions = Get-Content -Raw config/versions.env | ConvertFrom-StringData
+          "agent=$($versions.AGENT_RUNTIME_IMAGE.Split(':')[-1])" >> $env:GITHUB_OUTPUT
+          "action=$($versions.ACTION_SERVICE_IMAGE.Split(':')[-1])" >> $env:GITHUB_OUTPUT
+          "gateway=$($versions.MCP_GATEWAY_IMAGE.Split(':')[-1])" >> $env:GITHUB_OUTPUT
+          "calendar=$($versions.CALENDAR_MCP_IMAGE.Split(':')[-1])" >> $env:GITHUB_OUTPUT
+
+      - name: Получить Agent Runtime
+        uses: actions/checkout@v7
+        with:
+          repository: portable-agent/agent-runtime
+          ref: ${{ steps.versions.outputs.agent }}
+          path: repos/agent-runtime
+
+      - name: Получить Action Service
+        uses: actions/checkout@v7
+        with:
+          repository: portable-agent/action-service
+          ref: ${{ steps.versions.outputs.action }}
+          path: repos/action-service
+
+      - name: Получить MCP Gateway
+        uses: actions/checkout@v7
+        with:
+          repository: portable-agent/mcp-gateway
+          ref: ${{ steps.versions.outputs.gateway }}
+          path: repos/mcp-gateway
+
+      - name: Получить Calendar MCP
+        uses: actions/checkout@v7
+        with:
+          repository: portable-agent/calendar-mcp
+          ref: ${{ steps.versions.outputs.calendar }}
+          path: repos/calendar-mcp
+
+      - name: Запустить полный срез
+        shell: pwsh
+        run: ./scripts/start-local.ps1 -Apps
+
+      - name: Проверить путь от текста до события
+        shell: pwsh
+        run: ./scripts/check-apps.ps1 -TimeoutSeconds 60
+
+      - name: Удалить только тестовый Compose project
+        if: always()
+        shell: pwsh
+        run: ./scripts/stop-local.ps1 -DeleteData

@@ -45,6 +45,13 @@
   ],
   "clients": [
     {
+      "clientId": "agent-runtime",
+      "name": "Agent Runtime Resource Server",
+      "enabled": true,
+      "bearerOnly": true,
+      "protocol": "openid-connect"
+    },
+    {
       "clientId": "calendar-mcp",
       "name": "Calendar MCP Resource Server",
       "enabled": true,
@@ -132,6 +139,18 @@
             "id.token.claim": "true",
             "access.token.claim": "true",
             "userinfo.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
+          "name": "agent-runtime-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "agent-runtime",
+            "id.token.claim": "false",
+            "access.token.claim": "true",
             "introspection.token.claim": "true"
           }
         },

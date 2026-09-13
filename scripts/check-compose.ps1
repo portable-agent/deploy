@@ -22,6 +22,10 @@ $calendarClient = $realm.clients | Where-Object clientId -eq "calendar-mcp"
 if (-not $calendarClient -or -not $calendarClient.bearerOnly) {
     throw "Нет resource server client calendar-mcp."
 }
+$agentClient = $realm.clients | Where-Object clientId -eq "agent-runtime"
+if (-not $agentClient -or -not $agentClient.bearerOnly) {
+    throw "Нет resource server client agent-runtime."
+}
 $gatewayClient = $realm.clients | Where-Object clientId -eq "mcp-gateway"
 if (-not $gatewayClient -or -not $gatewayClient.bearerOnly) {
     throw "Нет resource server client mcp-gateway."
@@ -44,8 +48,9 @@ if (-not $gatewayScope -or $actionClient.defaultClientScopes -notcontains "mcp:c
     throw "Service token action-service не получает нужные scopes."
 }
 $localAudiences = @($localClient.protocolMappers | ForEach-Object { $_.config.'included.client.audience' })
-if ($localAudiences -notcontains "action-service" -or $localAudiences -notcontains "calendar-mcp") {
-    throw "Локальный JWT не получает audience action-service и calendar-mcp."
+if ($localAudiences -notcontains "agent-runtime" -or $localAudiences -notcontains "action-service" `
+    -or $localAudiences -notcontains "calendar-mcp") {
+    throw "Локальный JWT не получает audience agent-runtime, action-service и calendar-mcp."
 }
 $tenantMapper = $localClient.protocolMappers | Where-Object { $_.config.'claim.name' -eq "tenant_id" }
 if (-not $tenantMapper) {
@@ -65,15 +70,17 @@ $composeText = Get-Content -Raw -LiteralPath "compose/compose.yaml"
 if ($composeText -notmatch '(?ms)^  keycloak:.*?^    healthcheck:') {
     throw "У Keycloak нет readiness healthcheck."
 }
-foreach ($service in @("action-service", "mcp-gateway", "calendar-mcp")) {
+foreach ($service in @("agent-runtime", "action-service", "mcp-gateway", "calendar-mcp")) {
     if ($composeText -notmatch "(?m)^  $([regex]::Escape($service)):") {
         throw "В Compose нет приложения $service."
     }
 }
-if ($composeText -notmatch '(?ms)^  action-service:.*?MCP_GATEWAY_URL: http://mcp-gateway:8080' `
+if ($composeText -notmatch '(?ms)^  agent-runtime:.*?AGENT_OIDC_AUDIENCE: agent-runtime' `
+    -or $composeText -notmatch '(?ms)^  agent-runtime:.*?AGENT_DOCS_ENABLED: "false"' `
+    -or $composeText -notmatch '(?ms)^  action-service:.*?MCP_GATEWAY_URL: http://mcp-gateway:8080' `
     -or $composeText -notmatch '(?ms)^  action-service:.*?OIDC_AUDIENCE: action-service' `
     -or $composeText -notmatch '(?ms)^  mcp-gateway:.*?http://calendar-mcp:8080/mcp') {
-    throw "Compose не связывает Action Service с MCP Gateway и Calendar MCP по именам сервисов."
+    throw "Compose не связывает Agent Runtime, Action Service, MCP Gateway и Calendar MCP."
 }
 if ($composeText -notmatch 'TEMPORAL_ADMIN_ADDRESS:-temporal:7233') {
     throw "Portable Compose должен обращаться к Temporal по имени сервиса."
@@ -100,7 +107,7 @@ if ($startScript -notmatch 'compose/apps.local.yaml' -or $startScript -notmatch 
     throw "Локальные приложения должны собираться из соседних репозиториев."
 }
 $appsOverride = Get-Content -Raw -LiteralPath "compose/apps.local.yaml"
-foreach ($image in @("portable-agent/action-service:local", "portable-agent/mcp-gateway:local", "portable-agent/calendar-mcp:local")) {
+foreach ($image in @("portable-agent/agent-runtime:local", "portable-agent/action-service:local", "portable-agent/mcp-gateway:local", "portable-agent/calendar-mcp:local")) {
     if ($appsOverride -notmatch [regex]::Escape($image)) {
         throw "Local override не задаёт отдельный image tag $image."
     }
@@ -108,9 +115,35 @@ foreach ($image in @("portable-agent/action-service:local", "portable-agent/mcp-
 $keycloakCheck = Get-Content -Raw -LiteralPath "scripts/check-keycloak.ps1"
 if ($keycloakCheck -notmatch 'portable-agent-realm.json' `
     -or $keycloakCheck -notmatch 'tenant_id' `
+    -or $keycloakCheck -notmatch 'agent-runtime' `
     -or $keycloakCheck -notmatch 'calendar-mcp' `
     -or $keycloakCheck -notmatch 'calendar:write') {
     throw "Runtime-проверка Keycloak должна сверять JWT с realm fixture."
+}
+$appCheck = Get-Content -Raw -LiteralPath "scripts/check-apps.ps1"
+foreach ($required in @("AGENT_RUNTIME_PORT", "/api/v1/proposals", "availableConnectors", "requiresApproval", "proposalId")) {
+    if ($appCheck -notmatch [regex]::Escape($required)) {
+        throw "Сквозная проверка приложений не использует Agent Runtime: нет $required."
+    }
+}
+$versions = Get-Content -Raw -LiteralPath "config/versions.env"
+if ($versions -notmatch '(?m)^AGENT_RUNTIME_IMAGE=ghcr\.io/portable-agent/agent-runtime:[0-9a-f]{40}$') {
+    throw "Agent Runtime image должен быть закреплён полным Git SHA."
+}
+foreach ($oldName in @("utterance", "actor_id", "available_connectors", "requires_approval")) {
+    if ($appCheck -match [regex]::Escape($oldName)) {
+        throw "Сквозная проверка приложений содержит старое поле $oldName."
+    }
+}
+$appWorkflowPath = ".github/workflows/app-smoke.yml"
+if (-not (Test-Path -LiteralPath $appWorkflowPath)) {
+    throw "Нет CI-проверки полного Compose-среза."
+}
+$appWorkflow = Get-Content -Raw -LiteralPath $appWorkflowPath
+foreach ($required in @("versions.env", "agent-runtime", "start-local.ps1 -Apps", "check-apps.ps1", "stop-local.ps1 -DeleteData", "if: always()")) {
+    if ($appWorkflow -notmatch [regex]::Escape($required)) {
+        throw "CI-проверка полного среза не содержит $required."
+    }
 }
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
     throw "Docker не найден. Запусти проверку в CI или установи Docker Desktop."

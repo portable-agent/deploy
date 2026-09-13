@@ -8,7 +8,7 @@
 Платформа разработки включает:
 
 - Compose-профиль `core`: PostgreSQL, Redpanda, Keycloak, Temporal и OPA;
-- Compose-профиль `apps`: Action Service, MCP Gateway и Calendar MCP;
+- Compose-профиль `apps`: Agent Runtime, Action Service, MCP Gateway и Calendar MCP;
 - Compose-профиль `observe`: OpenTelemetry, Prometheus, Grafana, Tempo и Loki;
 - безопасный общий chart `charts/service`;
 - Argo CD bootstrap `charts/gitops`;
@@ -30,20 +30,26 @@ Copy-Item .env.example .env
 pwsh ./scripts/start-local.ps1 -Observe
 ```
 
-Чтобы поднять проверяемый путь `Action → Gateway → Calendar`, используй:
+Чтобы поднять проверяемый путь `Agent → Action → Gateway → Calendar`, используй:
 
 ```powershell
 pwsh ./scripts/start-local.ps1 -Apps
 pwsh ./scripts/check-apps.ps1
 ```
 
-`check-apps.ps1` создаёт и подтверждает тестовое действие, ждёт Temporal workflow и проверяет,
-что Calendar MCP сохранил ровно одно событие с тем же `eventId`.
+`check-apps.ps1` отправляет demo-команду в Agent Runtime, проверяет предложение, создаёт и
+подтверждает действие, ждёт Temporal workflow и проверяет, что Calendar MCP сохранил ровно одно
+событие с тем же `eventId`.
+
+Та же проверка выполняется workflow `Full application smoke` при изменениях Compose-пути. Workflow
+читает полные Git SHA из `config/versions.env`, собирает именно эти версии сервисов в отдельном
+Compose project и всегда удаляет только созданные им контейнеры и volumes.
 
 `-Apps` собирает образы из соседних локальных репозиториев через `compose/apps.local.yaml`. Пути можно
-переопределить переменными `ACTION_SERVICE_CONTEXT`, `MCP_GATEWAY_CONTEXT` и
-`CALENDAR_MCP_CONTEXT`; вход в GHCR для локального запуска не нужен. По умолчанию Action API доступен
-на `http://localhost:18081`, MCP Gateway — на `http://localhost:18083`, а Calendar MCP — на
+переопределить переменными `AGENT_RUNTIME_CONTEXT`, `ACTION_SERVICE_CONTEXT`,
+`MCP_GATEWAY_CONTEXT` и `CALENDAR_MCP_CONTEXT`; вход в GHCR для локального запуска не нужен. По
+умолчанию Agent Runtime доступен на `http://localhost:18080`, Action API — на
+`http://localhost:18081`, MCP Gateway — на `http://localhost:18083`, а Calendar MCP — на
 `http://localhost:18082`.
 
 Файл `.env` локальный и не коммитится. Значения `dev` и `stage` должны приходить из secret
@@ -61,7 +67,8 @@ manager, а не из Git.
 очищает созданные тестовые встречи.
 
 После запуска скрипт получает настоящий JWT и сверяет пользователя, `tenant_id` и audience
-`action-service` с realm fixture. Такой же токен использует локальный Action API.
+`agent-runtime`, `action-service` и `calendar-mcp` с realm fixture. Один пользовательский токен
+проходит независимую проверку в Agent Runtime и Action API.
 Если Keycloak volume создан старой версией fixture, запуск остановится с командой для явного
 пересоздания локальных данных.
 
