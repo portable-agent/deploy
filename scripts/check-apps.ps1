@@ -50,6 +50,25 @@ $payload = @{
     endAt = "2026-09-12T10:30:00+03:00"
     timeZone = "Europe/Moscow"
 }
+
+function Invoke-JsonRequest(
+    [string]$Method,
+    [string]$Uri,
+    [hashtable]$Headers,
+    [string]$Body = $null
+) {
+    $request = @{
+        Method = $Method
+        Uri = $Uri
+        Headers = $Headers
+    }
+    if ($Body) {
+        $request.ContentType = "application/json"
+        $request.Body = $Body
+    }
+    $response = Invoke-WebRequest @request
+    return $response.Content | ConvertFrom-Json -DateKind String
+}
 $proposalRequest = @{
     text = "Создай встречу `"$($payload.title)`" с $($payload.startAt) до $($payload.endAt)"
     context = @{
@@ -57,8 +76,8 @@ $proposalRequest = @{
         availableConnectors = @("fake-calendar")
     }
 } | ConvertTo-Json -Depth 5
-$proposalResult = Invoke-RestMethod -Method Post -Uri "$agentUrl/api/v1/proposals" `
-    -Headers $headers -ContentType "application/json" -Body $proposalRequest
+$proposalResult = Invoke-JsonRequest -Method Post -Uri "$agentUrl/api/v1/proposals" `
+    -Headers $headers -Body $proposalRequest
 $proposal = $proposalResult.proposal
 $proposalErrors = @()
 if (-not $proposal) { $proposalErrors += "proposal" }
@@ -80,8 +99,8 @@ $body = @{
     requestKey = $requestKey
     payload = $proposal.payload
 } | ConvertTo-Json -Depth 5
-$action = Invoke-RestMethod -Method Post -Uri "$actionUrl/api/v1/actions" `
-    -Headers $headers -ContentType "application/json" -Body $body
+$action = Invoke-JsonRequest -Method Post -Uri "$actionUrl/api/v1/actions" `
+    -Headers $headers -Body $body
 $decision = @{ decision = "CONFIRM"; payloadHash = $action.payloadHash } | ConvertTo-Json
 Invoke-RestMethod -Method Post -Uri "$actionUrl/api/v1/actions/$($action.id)/decisions" `
     -Headers $headers -ContentType "application/json" -Body $decision | Out-Null
@@ -89,7 +108,7 @@ Invoke-RestMethod -Method Post -Uri "$actionUrl/api/v1/actions/$($action.id)/dec
 $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
 do {
     Start-Sleep -Milliseconds 500
-    $saved = Invoke-RestMethod -Method Get -Uri "$actionUrl/api/v1/actions/$($action.id)" -Headers $headers
+    $saved = Invoke-JsonRequest -Method Get -Uri "$actionUrl/api/v1/actions/$($action.id)" -Headers $headers
 } while ($saved.status -notin @("SUCCEEDED", "FAILED") -and (Get-Date) -lt $deadline)
 if ($saved.status -ne "SUCCEEDED") {
     throw "Action $($action.id) не выполнен за $TimeoutSeconds секунд: $($saved.status)."
@@ -100,7 +119,7 @@ if (-not (Test-SameDateTime $saved.payload.startAt $payload.startAt) `
     throw "Action Service изменил время или часовой пояс подтверждённого payload."
 }
 
-$eventResponse = Invoke-RestMethod -Method Get -Uri "$calendarUrl/test/events?requestKey=$requestKey" `
+$eventResponse = Invoke-JsonRequest -Method Get -Uri "$calendarUrl/test/events?requestKey=$requestKey" `
     -Headers @{ "X-Test-Key" = Get-LocalSetting "CALENDAR_TEST_API_KEY" }
 $events = @($eventResponse.events)
 $event = $events[0]

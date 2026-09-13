@@ -125,6 +125,9 @@ if ($keycloakCheck -notmatch 'portable-agent-realm.json' `
     throw "Runtime-проверка Keycloak должна сверять JWT с realm fixture."
 }
 $appCheck = Get-Content -Raw -LiteralPath "scripts/check-apps.ps1"
+if ($appCheck -notmatch 'ConvertFrom-Json -DateKind String') {
+    throw "check-apps.ps1 должен сохранять исходные смещения времени из JSON."
+}
 foreach ($required in @("AGENT_RUNTIME_PORT", "/api/v1/proposals", "availableConnectors", "requiresApproval", "proposalId")) {
     if ($appCheck -notmatch [regex]::Escape($required)) {
         throw "Сквозная проверка приложений не использует Agent Runtime: нет $required."
