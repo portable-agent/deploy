@@ -30,7 +30,7 @@ $client = $realm.clients | Where-Object clientId -eq "portable-agent-local"
 $user = $realm.users | Where-Object username -eq "local-user"
 $password = ($user.credentials | Where-Object type -eq "password").value
 $keycloakUrl = "http://localhost:$(Get-LocalSetting 'KEYCLOAK_PORT')"
-$agentUrl = "http://localhost:$(Get-LocalSetting 'AGENT_RUNTIME_PORT')"
+$channelUrl = "http://localhost:$(Get-LocalSetting 'CHANNEL_GATEWAY_PORT')"
 $actionUrl = "http://localhost:$(Get-LocalSetting 'ACTION_SERVICE_PORT')"
 $calendarUrl = "http://localhost:$(Get-LocalSetting 'CALENDAR_MCP_PORT')"
 
@@ -70,13 +70,14 @@ function Invoke-JsonRequest(
     return $response.Content | ConvertFrom-Json -DateKind String
 }
 $proposalRequest = @{
+    requestKey = $requestKey
     text = "Создай встречу `"$($payload.title)`" с $($payload.startAt) до $($payload.endAt)"
     context = @{
+        locale = "ru-RU"
         timeZone = $payload.timeZone
-        availableConnectors = @("fake-calendar")
     }
 } | ConvertTo-Json -Depth 5
-$proposalResult = Invoke-JsonRequest -Method Post -Uri "$agentUrl/api/v1/proposals" `
+$proposalResult = Invoke-JsonRequest -Method Post -Uri "$channelUrl/api/v1/messages" `
     -Headers $headers -Body $proposalRequest
 $proposal = $proposalResult.proposal
 $proposalErrors = @()
@@ -91,7 +92,7 @@ if (-not (Test-SameDateTime $proposal.payload.endAt $payload.endAt)) { $proposal
 if ($proposal.payload.timeZone -ne $payload.timeZone) { $proposalErrors += "timeZone" }
 if ($proposalErrors.Count -gt 0) {
     $safeResponse = $proposalResult | ConvertTo-Json -Depth 8 -Compress
-    throw "Agent Runtime proposal не прошёл проверки: $($proposalErrors -join ', '). Ответ: $safeResponse"
+    throw "Channel Gateway proposal не прошёл проверки: $($proposalErrors -join ', '). Ответ: $safeResponse"
 }
 $body = @{
     kind = $proposal.kind
@@ -131,4 +132,4 @@ if ($events.Count -ne 1 -or $event.eventId -ne $saved.result.eventId `
     throw "Calendar MCP не сохранил ожидаемое событие."
 }
 
-Write-Host "Полный срез работает: proposal $($proposal.proposalId), action $($action.id), event $($saved.result.eventId)."
+Write-Host "Полный срез работает через Channel Gateway: proposal $($proposal.proposalId), action $($action.id), event $($saved.result.eventId)."

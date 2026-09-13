@@ -24,6 +24,7 @@ jobs:
     timeout-minutes: 30
     env:
       COMPOSE_PROJECT_NAME: pa-app-${{ github.run_id }}-${{ github.run_attempt }}
+      CHANNEL_GATEWAY_CONTEXT: ${{ github.workspace }}/repos/channel-gateway
       AGENT_RUNTIME_CONTEXT: ${{ github.workspace }}/repos/agent-runtime
       ACTION_SERVICE_CONTEXT: ${{ github.workspace }}/repos/action-service
       MCP_GATEWAY_CONTEXT: ${{ github.workspace }}/repos/mcp-gateway
@@ -37,10 +38,18 @@ jobs:
         shell: pwsh
         run: |
           $versions = Get-Content -Raw config/versions.env | ConvertFrom-StringData
+          "channel=$($versions.CHANNEL_GATEWAY_IMAGE.Split(':')[-1])" >> $env:GITHUB_OUTPUT
           "agent=$($versions.AGENT_RUNTIME_IMAGE.Split(':')[-1])" >> $env:GITHUB_OUTPUT
           "action=$($versions.ACTION_SERVICE_IMAGE.Split(':')[-1])" >> $env:GITHUB_OUTPUT
           "gateway=$($versions.MCP_GATEWAY_IMAGE.Split(':')[-1])" >> $env:GITHUB_OUTPUT
           "calendar=$($versions.CALENDAR_MCP_IMAGE.Split(':')[-1])" >> $env:GITHUB_OUTPUT
+
+      - name: Получить Channel Gateway
+        uses: actions/checkout@v7
+        with:
+          repository: portable-agent/channel-gateway
+          ref: ${{ steps.versions.outputs.channel }}
+          path: repos/channel-gateway
 
       - name: Получить Agent Runtime
         uses: actions/checkout@v7

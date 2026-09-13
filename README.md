@@ -8,7 +8,7 @@
 Платформа разработки включает:
 
 - Compose-профиль `core`: PostgreSQL, Redpanda, Keycloak, Temporal и OPA;
-- Compose-профиль `apps`: Agent Runtime, Action Service, MCP Gateway и Calendar MCP;
+- Compose-профиль `apps`: Channel Gateway, Agent Runtime, Action Service, MCP Gateway и Calendar MCP;
 - Compose-профиль `observe`: OpenTelemetry, Prometheus, Grafana, Tempo и Loki;
 - безопасный общий chart `charts/service`;
 - Argo CD bootstrap `charts/gitops`;
@@ -30,14 +30,14 @@ Copy-Item .env.example .env
 pwsh ./scripts/start-local.ps1 -Observe
 ```
 
-Чтобы поднять проверяемый путь `Agent → Action → Gateway → Calendar`, используй:
+Чтобы поднять проверяемый путь `Channel → Agent → Action → Gateway → Calendar`, используй:
 
 ```powershell
 pwsh ./scripts/start-local.ps1 -Apps
 pwsh ./scripts/check-apps.ps1
 ```
 
-`check-apps.ps1` отправляет demo-команду в Agent Runtime, проверяет предложение, создаёт и
+`check-apps.ps1` отправляет demo-команду в Channel Gateway, проверяет предложение, создаёт и
 подтверждает действие, ждёт Temporal workflow и проверяет, что Calendar MCP сохранил ровно одно
 событие с тем же `eventId`.
 
@@ -46,9 +46,10 @@ pwsh ./scripts/check-apps.ps1
 Compose project и всегда удаляет только созданные им контейнеры и volumes.
 
 `-Apps` собирает образы из соседних локальных репозиториев через `compose/apps.local.yaml`. Пути можно
-переопределить переменными `AGENT_RUNTIME_CONTEXT`, `ACTION_SERVICE_CONTEXT`,
+переопределить переменными `CHANNEL_GATEWAY_CONTEXT`, `AGENT_RUNTIME_CONTEXT`, `ACTION_SERVICE_CONTEXT`,
 `MCP_GATEWAY_CONTEXT` и `CALENDAR_MCP_CONTEXT`; вход в GHCR для локального запуска не нужен. По
-умолчанию Agent Runtime доступен на `http://localhost:18080`, Action API — на
+умолчанию Channel Gateway доступен на `http://localhost:18084`, Agent Runtime — на
+`http://localhost:18080`, Action API — на
 `http://localhost:18081`, MCP Gateway — на `http://localhost:18083`, а Calendar MCP — на
 `http://localhost:18082`.
 
@@ -67,8 +68,8 @@ manager, а не из Git.
 очищает созданные тестовые встречи.
 
 После запуска скрипт получает настоящий JWT и сверяет пользователя, `tenant_id` и audience
-`agent-runtime`, `action-service` и `calendar-mcp` с realm fixture. Один пользовательский токен
-проходит независимую проверку в Agent Runtime и Action API.
+`channel-gateway`, `agent-runtime`, `action-service` и `calendar-mcp` с realm fixture. Один
+пользовательский токен проходит независимую проверку в Channel Gateway, Agent Runtime и Action API.
 Если Keycloak volume создан старой версией fixture, запуск остановится с командой для явного
 пересоздания локальных данных.
 

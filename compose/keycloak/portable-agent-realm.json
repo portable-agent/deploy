@@ -45,6 +45,13 @@
   ],
   "clients": [
     {
+      "clientId": "channel-gateway",
+      "name": "Channel Gateway Resource Server",
+      "enabled": true,
+      "bearerOnly": true,
+      "protocol": "openid-connect"
+    },
+    {
       "clientId": "agent-runtime",
       "name": "Agent Runtime Resource Server",
       "enabled": true,
@@ -139,6 +146,18 @@
             "id.token.claim": "true",
             "access.token.claim": "true",
             "userinfo.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
+          "name": "channel-gateway-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "channel-gateway",
+            "id.token.claim": "false",
+            "access.token.claim": "true",
             "introspection.token.claim": "true"
           }
         },

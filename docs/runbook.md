@@ -18,12 +18,12 @@
 ## Приложения не запускаются
 
 1. Выполни `pwsh ./scripts/check-compose.ps1`.
-2. Проверь, что рядом лежат репозитории `portable-agent-agent-runtime`,
+2. Проверь, что рядом лежат репозитории `portable-agent-channel-gateway`, `portable-agent-agent-runtime`,
    `portable-agent-action-service`, `portable-agent-mcp-gateway` и `portable-agent-calendar-mcp`,
    либо задай их `*_CONTEXT` в `.env`.
 3. Если Keycloak сообщает о старом fixture, локально выполни
    `pwsh ./scripts/stop-local.ps1 -DeleteData`. Команда удаляет только volumes этого Compose project.
-4. Проверь `/health/live` Agent Runtime, `/actuator/health/readiness` Action Service и `/health`
+4. Проверь `/health/live` Channel Gateway и Agent Runtime, `/actuator/health/readiness` Action Service и `/health`
    двух MCP-сервисов.
 5. Не включай Calendar test API вне локального профиля `apps`.
 
@@ -33,7 +33,7 @@
 pwsh ./scripts/check-apps.ps1
 ```
 
-Она сначала создаёт предложение из текста, затем создаёт действие со случайным `requestKey`,
+Она отправляет текст через Channel Gateway, затем создаёт действие с тем же случайным `requestKey`,
 подтверждает его и сверяет результат Action Service с событием в тестовом календарном коннекторе.
 
 Первый Docker build скачивает Gradle и Python packages и может быть заметно медленнее повторных

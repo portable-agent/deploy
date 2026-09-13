@@ -197,6 +197,32 @@ services:
       retries: 20
     networks: [platform]
 
+  channel-gateway:
+    profiles: [apps]
+    image: ${CHANNEL_GATEWAY_IMAGE:?set CHANNEL_GATEWAY_IMAGE}
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8080
+      AGENT_URL: http://agent-runtime:8080
+      AGENT_TIMEOUT_MS: 5000
+      AGENT_AVAILABLE_CONNECTORS: '["fake-calendar"]'
+      OIDC_ISSUER_URL: http://localhost:${KEYCLOAK_PORT:-8081}/realms/portable-agent
+      OIDC_JWKS_URL: http://keycloak:8080/realms/portable-agent/protocol/openid-connect/certs
+      OIDC_AUDIENCE: channel-gateway
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      agent-runtime:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${CHANNEL_GATEWAY_PORT:-18084}:8080"
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://localhost:8080/health/live').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    networks: [platform]
+
   agent-runtime:
     profiles: [apps]
     image: ${AGENT_RUNTIME_IMAGE:?set AGENT_RUNTIME_IMAGE}

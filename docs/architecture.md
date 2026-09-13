@@ -25,6 +25,7 @@ services/catalog.json -> environments/<env>/services/<name>/values.yaml
 ```mermaid
 sequenceDiagram
     participant User as Пользователь
+    participant Channel as Channel Gateway
     participant Agent as Agent Runtime
     participant Action as Action Service
     participant Keycloak
@@ -32,8 +33,10 @@ sequenceDiagram
     participant Calendar as Calendar MCP
 
     User->>Keycloak: логин
-    Keycloak-->>User: tenant + audience agent-runtime и action-service
-    User->>Agent: текст + безопасный context + JWT
+    Keycloak-->>User: tenant + audience channel, agent и action
+    User->>Channel: текст + безопасный context + JWT
+    Channel->>Channel: JWT + server connector list
+    Channel->>Agent: нормализованный текст + тот же JWT
     Agent->>Agent: JWT + подготовка ActionPlan
     Agent-->>User: proposal требует подтверждения
     User->>Action: создать и подтвердить действие
@@ -50,5 +53,6 @@ sequenceDiagram
 Canonical issuer локального realm доступен хосту через `localhost`. Контейнеры загружают JWKS по
 внутреннему имени `keycloak`, поэтому проверка токена не зависит от DNS хоста. `start-local -Apps`
 сначала поднимает зависимости и создаёт Temporal namespace, затем собирает и запускает приложения.
-Agent Runtime не исполняет и не сохраняет действие. Он создаёт предложение по контракту `2.1.0`;
+Channel Gateway не зависит от Telegram и принимает общий текстовый контракт `2.2.0`. Agent Runtime не
+исполняет и не сохраняет действие. Он создаёт предложение по совместимому контракту `2.2.0`;
 после подтверждения Action Service становится источником состояния, аудита и Temporal workflow.
