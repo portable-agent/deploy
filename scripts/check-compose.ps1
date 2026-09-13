@@ -97,6 +97,10 @@ if ($startScript -notmatch 'scale temporal-namespace=0' -or $startScript -notmat
 if ($startScript -notmatch 'run --rm postgres-bootstrap') {
     throw "PostgreSQL bootstrap должен выполняться и для существующего volume."
 }
+$postgresBootstrap = Get-Content -Raw -LiteralPath "compose/postgres/bootstrap.sh"
+if ($postgresBootstrap -notmatch 'exec /bin/sh /scripts/init/01-users\.sh') {
+    throw "PostgreSQL init должен запускаться через shell и не зависеть от executable bit."
+}
 if ($startScript -notmatch 'scripts/check-keycloak.ps1') {
     throw "После запуска нужна runtime-проверка Keycloak fixture."
 }
