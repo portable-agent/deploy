@@ -1,4 +1,10 @@
 services:
+  channel-gateway:
+    image: portable-agent/channel-gateway:local
+    build:
+      context: ${CHANNEL_GATEWAY_CONTEXT:-../../portable-agent-channel-gateway}
+    pull_policy: build
+
   agent-runtime:
     image: portable-agent/agent-runtime:local
     build:
