@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 $linuxFiles = Get-ChildItem -Recurse -File -Filter "*.sh" | ForEach-Object { $_.FullName }
 foreach ($file in $linuxFiles) {
     $bytes = [System.IO.File]::ReadAllBytes($file)
@@ -142,10 +142,10 @@ foreach ($required in @("CHANNEL_GATEWAY_PORT", "/api/v1/messages", "requestKey"
     }
 }
 $versions = Get-Content -Raw -LiteralPath "config/versions.env"
-if ($versions -notmatch '(?m)^AGENT_RUNTIME_IMAGE=ghcr\.io/portable-agent/agent-runtime:[0-9a-f]{40}$') {
+if ($versions -notmatch '(?m)^AGENT_RUNTIME_IMAGE=ghcr\.io/portable-agent/agent-runtime:[0-9a-f]{40}\r?$') {
     throw "Agent Runtime image должен быть закреплён полным Git SHA."
 }
-if ($versions -notmatch '(?m)^CHANNEL_GATEWAY_IMAGE=ghcr\.io/portable-agent/channel-gateway:[0-9a-f]{40}$') {
+if ($versions -notmatch '(?m)^CHANNEL_GATEWAY_IMAGE=ghcr\.io/portable-agent/channel-gateway:[0-9a-f]{40}\r?$') {
     throw "Channel Gateway image должен быть закреплён полным Git SHA."
 }
 foreach ($oldName in @("utterance", "actor_id", "available_connectors", "requires_approval")) {

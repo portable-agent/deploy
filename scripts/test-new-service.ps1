@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("pa-service-" + [guid]::NewGuid())
 try {
     New-Item -ItemType Directory -Path "$tempRoot/services", "$tempRoot/environments" | Out-Null

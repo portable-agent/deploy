@@ -1,9 +1,10 @@
-param([switch]$Observe, [switch]$Apps)
+﻿param([switch]$Observe, [switch]$Apps)
 $ErrorActionPreference = "Stop"
 $envFiles = @("--env-file", ".env.example", "--env-file", "config/versions.env")
 if (Test-Path .env) { $envFiles += @("--env-file", ".env") }
 $composeFiles = @("-f", "compose/compose.yaml")
-if ($IsWindows) { $composeFiles += @("-f", "compose/windows.local.yaml") }
+$runningOnWindows = $PSVersionTable.PSEdition -eq "Desktop" -or $IsWindows
+if ($runningOnWindows) { $composeFiles += @("-f", "compose/windows.local.yaml") }
 function Get-LocalSetting([string]$Name) {
     $value = [Environment]::GetEnvironmentVariable($Name)
     foreach ($path in @(".env", ".env.example")) {
@@ -41,4 +42,4 @@ if ($Apps) {
         @appProfiles up -d --build --wait --scale temporal-namespace=0
     if ($LASTEXITCODE -ne 0) { throw "Приложения локального среза не запустились." }
 }
-Write-Host "Локальная инфраструктура готова. Для остановки: pwsh ./scripts/stop-local.ps1"
+Write-Host "Локальная инфраструктура готова. Для остановки: ./scripts/stop-local.ps1"
