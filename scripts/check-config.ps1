@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 & "$PSScriptRoot/check-chart.ps1"
 & "$PSScriptRoot/test-new-service.ps1"
 if (Get-Command docker -ErrorAction SilentlyContinue) { & "$PSScriptRoot/check-compose.ps1" }

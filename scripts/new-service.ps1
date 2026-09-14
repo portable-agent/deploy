@@ -1,4 +1,4 @@
-param(
+﻿param(
     [Parameter(Mandatory)][string]$Name,
     [Parameter(Mandatory)][string]$Image,
     [int]$Port = 8080,
@@ -6,6 +6,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$utf8WithoutBom = New-Object System.Text.UTF8Encoding($false)
 if ($Name -notmatch '^[a-z][a-z0-9-]{1,61}[a-z0-9]$') {
     throw "Name должен быть DNS-именем: маленькие латинские буквы, цифры и дефис."
 }
@@ -39,11 +40,20 @@ config:
   APP_ENV: $($environment.name)
 secretRefs: []
 "@
-    Set-Content -Path (Join-Path $folder "values.yaml") -Value $values -Encoding utf8NoBOM
+    [System.IO.File]::WriteAllText(
+        (Join-Path $folder "values.yaml"),
+        $values + [Environment]::NewLine,
+        $utf8WithoutBom
+    )
 }
 
 $catalog.items += [pscustomobject]@{ name = $Name; image = $Image; port = $Port }
 $catalog.items = @($catalog.items | Sort-Object name)
-$catalog | ConvertTo-Json -Depth 10 | Set-Content $catalogPath -Encoding utf8NoBOM
+$catalogJson = $catalog | ConvertTo-Json -Depth 10
+[System.IO.File]::WriteAllText(
+    $catalogPath,
+    $catalogJson + [Environment]::NewLine,
+    $utf8WithoutBom
+)
 Write-Host "Сервис $Name добавлен во все окружения. Проверь tag и secretRefs перед commit."
 

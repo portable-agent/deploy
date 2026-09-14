@@ -21,20 +21,20 @@
 - Helm 4.2.4;
 - k3d 5.9.0;
 - kubectl;
-- PowerShell 7.
+- Windows PowerShell 5.1 или PowerShell 7.
 
 Создай локальный файл настроек и запусти инфраструктуру:
 
 ```powershell
 Copy-Item .env.example .env
-pwsh ./scripts/start-local.ps1 -Observe
+./scripts/start-local.ps1 -Observe
 ```
 
 Чтобы поднять проверяемый путь `Channel → Agent → Action → Gateway → Calendar`, используй:
 
 ```powershell
-pwsh ./scripts/start-local.ps1 -Apps
-pwsh ./scripts/check-apps.ps1
+./scripts/start-local.ps1 -Apps
+./scripts/check-apps.ps1
 ```
 
 `check-apps.ps1` отправляет demo-команду в Channel Gateway, проверяет предложение, создаёт и
@@ -81,19 +81,19 @@ Worker, Temporal UI и Linux Compose используют внутренний �
 Все быстрые проверки:
 
 ```powershell
-pwsh ./scripts/check-config.ps1
+./scripts/check-config.ps1
 ```
 
 Полная проверка:
 
 ```powershell
-pwsh ./scripts/smoke-k3d.ps1
+./scripts/smoke-k3d.ps1
 ```
 
 Подготовить delivery-файлы нового сервиса:
 
 ```powershell
-pwsh ./scripts/new-service.ps1 -Name sample-api -Image ghcr.io/portable-agent/sample-api -Port 8080
+./scripts/new-service.ps1 -Name sample-api -Image ghcr.io/portable-agent/sample-api -Port 8080
 ```
 
 Архитектура и следующий шаг описаны в [docs/index.md](docs/index.md). Правила для разработчиков и

@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 
 if (-not (Get-Command helm -ErrorAction SilentlyContinue)) {
     throw "Helm не найден. Установи Helm 4.2.4 или запусти проверку в CI."

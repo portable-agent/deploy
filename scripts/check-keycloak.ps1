@@ -1,4 +1,4 @@
-param(
+﻿param(
     [Parameter(Mandatory = $true)][string]$BaseUrl,
     [Parameter(Mandatory = $true)][string]$ServiceSecret,
     [Parameter(Mandatory = $true)][string]$ExpectedTenant
@@ -53,7 +53,7 @@ try {
         throw "Service token action-service не содержит нужные claims."
     }
 } catch {
-    throw "Локальный Keycloak не соответствует compose/keycloak/portable-agent-realm.json. Для обновления тестовых данных выполни 'pwsh ./scripts/stop-local.ps1 -DeleteData', затем запусти стенд снова. Причина: $($_.Exception.Message)"
+    throw "Локальный Keycloak не соответствует compose/keycloak/portable-agent-realm.json. Для обновления тестовых данных выполни './scripts/stop-local.ps1 -DeleteData', затем запусти стенд снова. Причина: $($_.Exception.Message)"
 }
 
 Write-Host "Keycloak fixture прошёл runtime-проверку."

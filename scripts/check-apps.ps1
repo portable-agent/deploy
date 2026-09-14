@@ -1,4 +1,4 @@
-param([int]$TimeoutSeconds = 30)
+﻿param([int]$TimeoutSeconds = 30)
 $ErrorActionPreference = "Stop"
 
 function Get-LocalSetting([string]$Name) {
@@ -63,10 +63,16 @@ function Invoke-JsonRequest(
         Headers = $Headers
     }
     if ($Body) {
-        $request.ContentType = "application/json"
+        $request.ContentType = "application/json; charset=utf-8"
         $request.Body = $Body
     }
+    if ($PSVersionTable.PSEdition -eq "Desktop") {
+        $request.UseBasicParsing = $true
+    }
     $response = Invoke-WebRequest @request
+    if ($PSVersionTable.PSEdition -eq "Desktop") {
+        return $response.Content | ConvertFrom-Json
+    }
     return $response.Content | ConvertFrom-Json -DateKind String
 }
 $proposalRequest = @{
