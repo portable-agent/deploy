@@ -13,6 +13,27 @@ function Get-LocalSetting([string]$Name) {
     return $value
 }
 
+function Get-AppNetwork {
+    $projectName = Get-LocalSetting "COMPOSE_PROJECT_NAME"
+    $containerIds = @(& docker ps `
+        --filter "label=com.docker.compose.project=$projectName" `
+        --filter "label=com.docker.compose.service=channel-gateway" `
+        --format "{{.ID}}") | Where-Object { $_ }
+    if ($LASTEXITCODE -ne 0 -or $containerIds.Count -ne 1) {
+        throw "Expected one running Channel Gateway container in Compose project $projectName."
+    }
+
+    $networksJson = & docker inspect --format '{{json .NetworkSettings.Networks}}' $containerIds[0]
+    if ($LASTEXITCODE -ne 0 -or -not $networksJson) {
+        throw "Cannot inspect the Channel Gateway network."
+    }
+    $networkNames = @(($networksJson | ConvertFrom-Json).PSObject.Properties.Name)
+    if ($networkNames.Count -ne 1) {
+        throw "Expected Channel Gateway to use exactly one Compose network."
+    }
+    return $networkNames[0]
+}
+
 if (-not $TestLabPath) { $TestLabPath = Get-LocalSetting "TEST_LAB_PATH" }
 $resolvedTestLabPath = (Resolve-Path -LiteralPath $TestLabPath).Path
 if (-not (Test-Path -LiteralPath (Join-Path $resolvedTestLabPath "Taskfile.yml"))) {
@@ -35,7 +56,7 @@ $settings = @{
     CHANNEL_URL = "http://channel-gateway:8080"
     ACTION_URL = "http://action-service:8080"
     CALENDAR_TEST_URL = "http://calendar-mcp:8080"
-    DOCKER_NETWORK = "$(Get-LocalSetting 'COMPOSE_PROJECT_NAME')_default"
+    DOCKER_NETWORK = Get-AppNetwork
     OIDC_REALM = $realm.realm
     OIDC_CLIENT_ID = $client.clientId
     TEST_USERNAME = $user.username
