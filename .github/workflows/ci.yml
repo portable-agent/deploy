@@ -18,6 +18,11 @@ jobs:
       - uses: azure/setup-helm@v5.0.1
         with:
           version: v4.2.4
+      - uses: go-task/setup-task@v2
+        with:
+          version: 3.53.1
+      - name: Проверить команды разработчика
+        run: task --list
       - name: Проверить Helm chart
         shell: pwsh
         run: ./scripts/check-config.ps1

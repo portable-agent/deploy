@@ -13,3 +13,4 @@ nav:
   - Решения:
       - Отдельный deploy-репозиторий: decisions/0001-deploy-repository.md
       - Платформа разработки: decisions/0002-developer-platform.md
+      - Единые команды разработчика: decisions/0003-taskfile-workflow.md

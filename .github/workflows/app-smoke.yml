@@ -8,10 +8,12 @@ on:
       - ".env.example"
       - "compose/**"
       - "config/versions.env"
+      - "Taskfile.yml"
       - "scripts/check-apps.ps1"
       - "scripts/check-compose.ps1"
       - "scripts/check-keycloak.ps1"
       - "scripts/start-local.ps1"
+      - "scripts/service-local.ps1"
       - "scripts/stop-local.ps1"
 
 permissions:
