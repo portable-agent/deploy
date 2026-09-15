@@ -1,0 +1,91 @@
+version: "3"
+
+silent: true
+
+vars:
+  POWERSHELL: '{{if eq OS "windows"}}powershell.exe{{else}}pwsh{{end}}'
+  POWERSHELL_ARGS: '{{if eq OS "windows"}}-NoProfile -ExecutionPolicy Bypass{{else}}-NoProfile{{end}}'
+
+tasks:
+  default:
+    desc: Показать доступные команды
+    cmds:
+      - task --list
+
+  infra:up:
+    desc: Поднять PostgreSQL, Redpanda, Keycloak, Temporal и OPA без приложений
+    cmds:
+      - '{{.POWERSHELL}} {{.POWERSHELL_ARGS}} -File ./scripts/start-local.ps1'
+
+  doctor:
+    desc: Проверить инструменты для локального Compose-режима
+    cmds:
+      - docker version --format "Docker Engine {{`{{.Server.Version}}`}}"
+      - docker compose version
+
+  infra:observe:
+    desc: Поднять инфраструктуру вместе с локальной наблюдаемостью
+    cmds:
+      - '{{.POWERSHELL}} {{.POWERSHELL_ARGS}} -File ./scripts/start-local.ps1 -Observe'
+
+  services:up:
+    desc: Собрать и поднять все локальные сервисы
+    cmds:
+      - '{{.POWERSHELL}} {{.POWERSHELL_ARGS}} -File ./scripts/start-local.ps1 -Apps'
+
+  service:up:
+    desc: Собрать выбранный сервис и поднять его обязательные зависимости
+    requires:
+      vars: [SERVICE]
+    cmds:
+      - '{{.POWERSHELL}} {{.POWERSHELL_ARGS}} -File ./scripts/start-local.ps1 -Service "{{.SERVICE}}"'
+
+  service:stop:
+    desc: Остановить выбранный сервис
+    requires:
+      vars: [SERVICE]
+    cmds:
+      - '{{.POWERSHELL}} {{.POWERSHELL_ARGS}} -File ./scripts/service-local.ps1 -Action Stop -Service "{{.SERVICE}}"'
+
+  service:restart:
+    desc: Пересобрать и перезапустить выбранный сервис
+    requires:
+      vars: [SERVICE]
+    cmds:
+      - '{{.POWERSHELL}} {{.POWERSHELL_ARGS}} -File ./scripts/service-local.ps1 -Action Restart -Service "{{.SERVICE}}"'
+
+  service:logs:
+    desc: Следить за логами выбранного сервиса
+    requires:
+      vars: [SERVICE]
+    vars:
+      TAIL: '{{default "100" .TAIL}}'
+    cmds:
+      - '{{.POWERSHELL}} {{.POWERSHELL_ARGS}} -File ./scripts/service-local.ps1 -Action Logs -Service "{{.SERVICE}}" -Tail {{.TAIL}}'
+
+  status:
+    desc: Показать состояние локального окружения
+    cmds:
+      - '{{.POWERSHELL}} {{.POWERSHELL_ARGS}} -File ./scripts/service-local.ps1 -Action Status'
+
+  test:e2e:
+    desc: Поднять полный срез и выполнить сквозной тест встречи
+    cmds:
+      - task: services:up
+      - '{{.POWERSHELL}} {{.POWERSHELL_ARGS}} -File ./scripts/check-apps.ps1'
+
+  verify:
+    desc: Выполнить локальные проверки конфигурации и документации
+    cmds:
+      - '{{.POWERSHELL}} {{.POWERSHELL_ARGS}} -File ./scripts/check-config.ps1'
+
+  down:
+    desc: Остановить локальное окружение без удаления данных
+    cmds:
+      - '{{.POWERSHELL}} {{.POWERSHELL_ARGS}} -File ./scripts/stop-local.ps1'
+
+  reset:
+    desc: Остановить окружение и удалить только его локальные данные
+    prompt: Все локальные данные Portable Agent будут удалены. Продолжить?
+    cmds:
+      - '{{.POWERSHELL}} {{.POWERSHELL_ARGS}} -File ./scripts/stop-local.ps1 -DeleteData'

@@ -22,9 +22,8 @@
 ## Команды
 
 ```powershell
-pwsh ./scripts/check-chart.ps1
-pwsh ./scripts/smoke-k3d.ps1
-pwsh ./scripts/check-docs.ps1
+task verify
+task test:e2e
 ```
 
 ## Правила изменений

@@ -21,21 +21,46 @@
 - Helm 4.2.4;
 - k3d 5.9.0;
 - kubectl;
+- Task 3.53.1;
 - Windows PowerShell 5.1 или PowerShell 7.
 
-Создай локальный файл настроек и запусти инфраструктуру:
+На Windows установи Task один раз:
+
+```powershell
+winget install --id Task.Task --exact --version 3.53.1
+```
+
+Открой новый терминал и выполни `task doctor`, чтобы проверить Docker Engine и Docker Compose.
+
+Создай локальный файл настроек и запусти только инфраструктуру без приложений:
 
 ```powershell
 Copy-Item .env.example .env
-./scripts/start-local.ps1 -Observe
+task infra:up
 ```
 
-Чтобы поднять проверяемый путь `Channel → Agent → Action → Gateway → Calendar`, используй:
+Поднять один сервис из соседней локальной репы вместе с обязательными зависимостями:
 
 ```powershell
-./scripts/start-local.ps1 -Apps
-./scripts/check-apps.ps1
+task service:up SERVICE=action-service
 ```
+
+После изменения кода пересобери только нужный сервис:
+
+```powershell
+task service:restart SERVICE=action-service
+```
+
+Чтобы поднять и проверить путь `Channel → Agent → Action → Gateway → Calendar`, используй:
+
+```powershell
+task services:up
+task test:e2e
+```
+
+`task status` показывает состояние, `task service:logs SERVICE=action-service` — логи. `task down`
+сохраняет локальные данные. `task reset` удаляет только volumes текущего Compose project и всегда
+требует явного подтверждения.
 
 `check-apps.ps1` отправляет demo-команду в Channel Gateway, проверяет предложение, создаёт и
 подтверждает действие, ждёт Temporal workflow и проверяет, что Calendar MCP сохранил ровно одно
@@ -81,7 +106,7 @@ Worker, Temporal UI и Linux Compose используют внутренний �
 Все быстрые проверки:
 
 ```powershell
-./scripts/check-config.ps1
+task verify
 ```
 
 Полная проверка:

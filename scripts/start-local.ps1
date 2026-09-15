@@ -1,5 +1,11 @@
-﻿param([switch]$Observe, [switch]$Apps)
+﻿param(
+    [switch]$Observe,
+    [switch]$Apps,
+    [ValidateSet("channel-gateway", "agent-runtime", "action-service", "mcp-gateway", "calendar-mcp")]
+    [string]$Service
+)
 $ErrorActionPreference = "Stop"
+if ($Apps -and $Service) { throw "Используй -Apps или -Service, но не оба параметра одновременно." }
 $envFiles = @("--env-file", ".env.example", "--env-file", "config/versions.env")
 if (Test-Path .env) { $envFiles += @("--env-file", ".env") }
 $composeFiles = @("-f", "compose/compose.yaml")
@@ -41,5 +47,10 @@ if ($Apps) {
     & docker compose @envFiles @composeFiles -f compose/apps.local.yaml `
         @appProfiles up -d --build --wait --scale temporal-namespace=0
     if ($LASTEXITCODE -ne 0) { throw "Приложения локального среза не запустились." }
+} elseif ($Service) {
+    $appProfiles = @($coreProfiles + @("--profile", "apps"))
+    & docker compose @envFiles @composeFiles -f compose/apps.local.yaml `
+        @appProfiles up -d --build --wait $Service
+    if ($LASTEXITCODE -ne 0) { throw "Сервис $Service и его зависимости не запустились." }
 }
 Write-Host "Локальная инфраструктура готова. Для остановки: ./scripts/stop-local.ps1"

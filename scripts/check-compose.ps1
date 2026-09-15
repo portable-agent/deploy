@@ -117,6 +117,47 @@ if ($startScript -notmatch '\[switch\]\$Apps' -or $startScript -notmatch '"apps"
 if ($startScript -notmatch 'compose/apps.local.yaml' -or $startScript -notmatch 'up -d --build --wait') {
     throw "Локальные приложения должны собираться из соседних репозиториев."
 }
+$taskfilePath = "Taskfile.yml"
+if (-not (Test-Path -LiteralPath $taskfilePath)) {
+    throw "Нет единой точки входа Taskfile.yml для локальной разработки."
+}
+$taskfile = Get-Content -Raw -LiteralPath $taskfilePath
+foreach ($taskName in @(
+    "infra:up",
+    "services:up",
+    "service:up",
+    "service:stop",
+    "service:restart",
+    "service:logs",
+    "doctor",
+    "status",
+    "test:e2e",
+    "down",
+    "reset"
+)) {
+    if ($taskfile -notmatch "(?m)^  $([regex]::Escape($taskName)):") {
+        throw "В Taskfile нет команды $taskName."
+    }
+}
+if ($taskfile -notmatch 'scripts/start-local\.ps1' `
+    -or $taskfile -notmatch 'scripts/service-local\.ps1' `
+    -or $taskfile -notmatch 'scripts/check-apps\.ps1' `
+    -or $taskfile -notmatch '(?m)^    prompt:') {
+    throw "Taskfile не связывает команды запуска, управления, E2E и безопасного reset."
+}
+if ($startScript -notmatch '\[string\]\$Service' -or $startScript -notmatch '\$Service') {
+    throw "start-local должен уметь запускать один выбранный сервис."
+}
+$serviceScriptPath = "scripts/service-local.ps1"
+if (-not (Test-Path -LiteralPath $serviceScriptPath)) {
+    throw "Нет безопасного управления отдельным локальным сервисом."
+}
+$serviceScript = Get-Content -Raw -LiteralPath $serviceScriptPath
+foreach ($action in @("Status", "Stop", "Restart", "Logs")) {
+    if ($serviceScript -notmatch [regex]::Escape('"' + $action + '"')) {
+        throw "service-local не поддерживает команду $action."
+    }
+}
 $appsOverride = Get-Content -Raw -LiteralPath "compose/apps.local.yaml"
 foreach ($image in @("portable-agent/channel-gateway:local", "portable-agent/agent-runtime:local", "portable-agent/action-service:local", "portable-agent/mcp-gateway:local", "portable-agent/calendar-mcp:local")) {
     if ($appsOverride -notmatch [regex]::Escape($image)) {
