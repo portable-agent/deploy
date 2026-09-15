@@ -1,12 +1,12 @@
 # Deploy
 
 Репозиторий содержит инженерный полигон Portable Agent. Compose поднимает инфраструктуру и локальный
-полный локальный slice `Channel Gateway → Agent Runtime → Action Service → MCP Gateway → Calendar MCP`. Минимальный
+slice `Channel Gateway → Agent Runtime → Action Service → MCP Gateway → Calendar MCP`. Минимальный
 Helm chart устанавливается и проверяется в одноразовом k3d-кластере.
 
 Текущий результат:
 
-1. acceptance-тест полного backend-пути в `test-lab`;
+1. запуск acceptance-теста полного backend-пути из отдельного `test-lab`;
 2. единый локальный JWT с отдельными audience сервисов;
 3. общий Channel Gateway и Agent Runtime с закрытыми API и контрактом `2.2.0`;
 4. воспроизводимый Compose с локальной сборкой всех приложений.

@@ -62,9 +62,10 @@ task test:e2e
 сохраняет локальные данные. `task reset` удаляет только volumes текущего Compose project и всегда
 требует явного подтверждения.
 
-`check-apps.ps1` отправляет demo-команду в Channel Gateway, проверяет предложение, создаёт и
-подтверждает действие, ждёт Temporal workflow и проверяет, что Calendar MCP сохранил ровно одно
-событие с тем же `eventId`.
+`deploy` поднимает окружение, затем `run-test-lab.ps1` передаёт локальную тестовую конфигурацию в
+соседний репозиторий `portable-agent-test-lab`. Сам black-box сценарий принадлежит `test-lab`: он
+отправляет demo-команду в Channel Gateway, подтверждает действие, ждёт Temporal workflow и проверяет,
+что Calendar MCP сохранил ровно одно событие с тем же `eventId`.
 
 Та же проверка выполняется workflow `Full application smoke` при изменениях Compose-пути. Workflow
 читает полные Git SHA из `config/versions.env`, собирает именно эти версии сервисов в отдельном
@@ -72,8 +73,9 @@ Compose project и всегда удаляет только созданные �
 
 `-Apps` собирает образы из соседних локальных репозиториев через `compose/apps.local.yaml`. Пути можно
 переопределить переменными `CHANNEL_GATEWAY_CONTEXT`, `AGENT_RUNTIME_CONTEXT`, `ACTION_SERVICE_CONTEXT`,
-`MCP_GATEWAY_CONTEXT` и `CALENDAR_MCP_CONTEXT`; вход в GHCR для локального запуска не нужен. По
-умолчанию Channel Gateway доступен на `http://localhost:18084`, Agent Runtime — на
+`MCP_GATEWAY_CONTEXT` и `CALENDAR_MCP_CONTEXT`; вход в GHCR для локального запуска не нужен.
+`TEST_LAB_PATH` по умолчанию указывает на соседний `../portable-agent-test-lab`; путь можно
+переопределить в `.env`. Channel Gateway доступен на `http://localhost:18084`, Agent Runtime — на
 `http://localhost:18080`, Action API — на
 `http://localhost:18081`, MCP Gateway — на `http://localhost:18083`, а Calendar MCP — на
 `http://localhost:18082`.

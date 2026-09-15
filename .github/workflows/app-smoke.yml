@@ -9,7 +9,7 @@ on:
       - "compose/**"
       - "config/versions.env"
       - "Taskfile.yml"
-      - "scripts/check-apps.ps1"
+      - "scripts/run-test-lab.ps1"
       - "scripts/check-compose.ps1"
       - "scripts/check-keycloak.ps1"
       - "scripts/start-local.ps1"
@@ -31,6 +31,7 @@ jobs:
       ACTION_SERVICE_CONTEXT: ${{ github.workspace }}/repos/action-service
       MCP_GATEWAY_CONTEXT: ${{ github.workspace }}/repos/mcp-gateway
       CALENDAR_MCP_CONTEXT: ${{ github.workspace }}/repos/calendar-mcp
+      TEST_LAB_PATH: ${{ github.workspace }}/repos/test-lab
     steps:
       - name: Получить deploy
         uses: actions/checkout@v7
@@ -45,6 +46,7 @@ jobs:
           "action=$($versions.ACTION_SERVICE_IMAGE.Split(':')[-1])" >> $env:GITHUB_OUTPUT
           "gateway=$($versions.MCP_GATEWAY_IMAGE.Split(':')[-1])" >> $env:GITHUB_OUTPUT
           "calendar=$($versions.CALENDAR_MCP_IMAGE.Split(':')[-1])" >> $env:GITHUB_OUTPUT
+          "test_lab=$($versions.TEST_LAB_REF)" >> $env:GITHUB_OUTPUT
 
       - name: Получить Channel Gateway
         uses: actions/checkout@v7
@@ -81,13 +83,24 @@ jobs:
           ref: ${{ steps.versions.outputs.calendar }}
           path: repos/calendar-mcp
 
+      - name: Получить Test Lab
+        uses: actions/checkout@v7
+        with:
+          repository: portable-agent/test-lab
+          ref: ${{ steps.versions.outputs.test_lab }}
+          path: repos/test-lab
+
+      - uses: go-task/setup-task@v2
+        with:
+          version: 3.53.1
+
       - name: Запустить полный срез
         shell: pwsh
         run: ./scripts/start-local.ps1 -Apps
 
       - name: Проверить путь от текста до события
         shell: pwsh
-        run: ./scripts/check-apps.ps1 -TimeoutSeconds 60
+        run: ./scripts/run-test-lab.ps1
 
       - name: Удалить только тестовый Compose project
         if: always()
