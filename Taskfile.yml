@@ -28,6 +28,13 @@ tasks:
     cmds:
       - '{{.POWERSHELL}} {{.POWERSHELL_ARGS}} -File ./scripts/start-local.ps1 -Observe'
 
+  preview:smoke:
+    desc: Проверить изолированное preview-окружение для номера PR
+    requires:
+      vars: [PR]
+    cmds:
+      - '{{.POWERSHELL}} {{.POWERSHELL_ARGS}} -File ./scripts/smoke-preview.ps1 -PullRequestNumber {{.PR}}'
+
   services:up:
     desc: Собрать и поднять все локальные сервисы
     cmds:

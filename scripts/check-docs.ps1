@@ -10,7 +10,9 @@ $requiredFiles = @(
     "docs/development.md",
     "docs/runbook.md",
     "docs/decisions/0001-deploy-repository.md",
-    "docs/decisions/0003-taskfile-workflow.md"
+    "docs/decisions/0003-taskfile-workflow.md",
+    "docs/decisions/0004-test-lab-ownership.md",
+    "docs/decisions/0005-pr-preview.md"
 )
 
 $missing = $requiredFiles | Where-Object { -not (Test-Path -LiteralPath $_ -PathType Leaf) }

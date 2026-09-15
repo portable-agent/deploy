@@ -181,6 +181,9 @@ if (Test-Path -LiteralPath "scripts/check-apps.ps1") {
     throw "Продуктовый E2E не должен дублироваться в deploy."
 }
 $testLabRunner = Get-Content -Raw -LiteralPath $testLabRunnerPath
+if ($testLabRunner -notmatch '\$containerIds\s*=\s*@\(\s*\r?\n\s*\(& docker ps') {
+    throw "Результат docker ps должен сохраняться массивом до обращения по индексу."
+}
 foreach ($required in @("TEST_LAB_PATH", "portable-agent-realm.json", "CALENDAR_TEST_API_KEY", "DOCKER_NETWORK", "docker inspect", "com.docker.compose.service=channel-gateway", "http://channel-gateway:8080", "http://action-service:8080", "http://calendar-mcp:8080", "task", "test:e2e")) {
     if ($testLabRunner -notmatch [regex]::Escape($required)) {
         throw "Адаптер test-lab не содержит $required."

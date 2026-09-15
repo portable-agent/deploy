@@ -15,10 +15,12 @@ function Get-LocalSetting([string]$Name) {
 
 function Get-AppNetwork {
     $projectName = Get-LocalSetting "COMPOSE_PROJECT_NAME"
-    $containerIds = @(& docker ps `
-        --filter "label=com.docker.compose.project=$projectName" `
-        --filter "label=com.docker.compose.service=channel-gateway" `
-        --format "{{.ID}}") | Where-Object { $_ }
+    $containerIds = @(
+        (& docker ps `
+            --filter "label=com.docker.compose.project=$projectName" `
+            --filter "label=com.docker.compose.service=channel-gateway" `
+            --format "{{.ID}}") | Where-Object { $_ }
+    )
     if ($LASTEXITCODE -ne 0 -or $containerIds.Count -ne 1) {
         throw "Expected one running Channel Gateway container in Compose project $projectName."
     }

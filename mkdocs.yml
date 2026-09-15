@@ -15,3 +15,4 @@ nav:
       - Платформа разработки: decisions/0002-developer-platform.md
       - Единые команды разработчика: decisions/0003-taskfile-workflow.md
       - Владение сквозными тестами: decisions/0004-test-lab-ownership.md
+      - Временное окружение PR: decisions/0005-pr-preview.md

@@ -7,6 +7,7 @@ if (-not (Get-Command helm -ErrorAction SilentlyContinue)) {
 foreach ($item in @(
     @{ Name = "platform-base"; Path = "charts/platform-base"; Args = @("--set", "environment=smoke") },
     @{ Name = "service"; Path = "charts/service"; Args = @("-f", "charts/service/tests/smoke-values.yaml") },
+    @{ Name = "preview"; Path = "charts/preview"; Args = @() },
     @{ Name = "gitops"; Path = "charts/gitops"; Args = @("-f", "charts/gitops/tests/smoke-values.yaml") }
 )) {
     & helm lint $item.Path --strict @($item.Args)

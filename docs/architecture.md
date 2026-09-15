@@ -20,6 +20,11 @@ services/catalog.json -> environments/<env>/services/<name>/values.yaml
 кластер. Полный smoke создаёт только временный k3d-кластер и всегда удаляет лишь созданный им
 кластер.
 
+Для pull request используется отдельный namespace `portable-agent-pr-<number>`. Chart `preview`
+создаёт Namespace, ResourceQuota, LimitRange и default-deny NetworkPolicy, после чего приложения
+устанавливаются существующим `service` chart. Сейчас CI проверяет эту модель в одноразовом k3d;
+постоянный кластер позже добавит ingress, DNS и автоматическое удаление по метке срока жизни.
+
 ## Локальный execution slice
 
 ```mermaid
