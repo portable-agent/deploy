@@ -32,9 +32,10 @@ if (-not $client -or -not $user -or -not $password) {
 
 $settings = @{
     KEYCLOAK_URL = "http://localhost:$(Get-LocalSetting 'KEYCLOAK_PORT')"
-    CHANNEL_URL = "http://host.docker.internal:$(Get-LocalSetting 'CHANNEL_GATEWAY_PORT')"
-    ACTION_URL = "http://host.docker.internal:$(Get-LocalSetting 'ACTION_SERVICE_PORT')"
-    CALENDAR_TEST_URL = "http://host.docker.internal:$(Get-LocalSetting 'CALENDAR_MCP_PORT')"
+    CHANNEL_URL = "http://channel-gateway:8080"
+    ACTION_URL = "http://action-service:8080"
+    CALENDAR_TEST_URL = "http://calendar-mcp:8080"
+    DOCKER_NETWORK = "$(Get-LocalSetting 'COMPOSE_PROJECT_NAME')_default"
     OIDC_REALM = $realm.realm
     OIDC_CLIENT_ID = $client.clientId
     TEST_USERNAME = $user.username
