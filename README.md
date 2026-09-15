@@ -11,6 +11,7 @@
 - Compose-профиль `apps`: Channel Gateway, Agent Runtime, Action Service, MCP Gateway и Calendar MCP;
 - Compose-профиль `observe`: OpenTelemetry, Prometheus, Grafana, Tempo и Loki;
 - безопасный общий chart `charts/service`;
+- изолированный PR preview namespace с quota, limits и default-deny сетью;
 - Argo CD bootstrap `charts/gitops`;
 - каталог окружений и генератор нового сервиса;
 - быстрые проверки в каждом PR и полный k3d smoke по расписанию.
@@ -116,6 +117,17 @@ task verify
 ```powershell
 ./scripts/smoke-k3d.ps1
 ```
+
+Проверить модель временного окружения для номера pull request:
+
+```powershell
+task preview:smoke PR=123
+```
+
+Команда создаёт отдельный k3d-кластер и namespace `portable-agent-pr-123`, применяет guardrails,
+устанавливает тестовый сервис и всегда удаляет только созданный кластер. Сейчас это ephemeral
+CI-preview без публичного URL. После подключения общего Kubernetes-кластера тот же `charts/preview`
+будет создавать долгоживущий namespace, а ingress и DNS останутся ответственностью платформы.
 
 Подготовить delivery-файлы нового сервиса:
 

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["namespace", "quota", "limits"],
+  "properties": {
+    "namespace": {
+      "type": "object",
+      "required": ["name", "pullRequest", "expiresAt"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 63,
+          "pattern": "^portable-agent-pr-[1-9][0-9]*$"
+        },
+        "pullRequest": {"type": "string", "pattern": "^[1-9][0-9]*$"},
+        "expiresAt": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        }
+      }
+    },
+    "quota": {
+      "type": "object",
+      "required": ["pods", "requestsCpu", "requestsMemory", "limitsCpu", "limitsMemory"]
+    },
+    "limits": {
+      "type": "object",
+      "required": ["defaultRequestCpu", "defaultRequestMemory", "defaultCpu", "defaultMemory"]
+    }
+  }
+}

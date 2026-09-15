@@ -1,0 +1,37 @@
+name: Pull request preview smoke
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/preview-smoke.yml"
+      - "charts/**"
+      - "scripts/check-chart.ps1"
+      - "scripts/check-preview.ps1"
+      - "scripts/smoke-preview.ps1"
+      - "Taskfile.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    name: Preview namespace smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v5.0.1
+        with:
+          version: v4.2.4
+      - name: Установить k3d
+        env:
+          K3D_VERSION: v5.9.0
+        run: |
+          curl -fsSLo /tmp/k3d-install.sh "https://raw.githubusercontent.com/k3d-io/k3d/${K3D_VERSION}/install.sh"
+          TAG="${K3D_VERSION}" bash /tmp/k3d-install.sh
+      - name: Проверить preview namespace
+        shell: pwsh
+        run: >-
+          ./scripts/smoke-preview.ps1
+          -PullRequestNumber "${{ github.event.pull_request.number }}"
+          -ClusterName "pa-preview-${{ github.run_id }}"
