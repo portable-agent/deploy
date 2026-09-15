@@ -141,7 +141,7 @@ foreach ($taskName in @(
 }
 if ($taskfile -notmatch 'scripts/start-local\.ps1' `
     -or $taskfile -notmatch 'scripts/service-local\.ps1' `
-    -or $taskfile -notmatch 'scripts/check-apps\.ps1' `
+    -or $taskfile -notmatch 'scripts/run-test-lab\.ps1' `
     -or $taskfile -notmatch '(?m)^    prompt:') {
     throw "Taskfile не связывает команды запуска, управления, E2E и безопасного reset."
 }
@@ -173,13 +173,17 @@ if ($keycloakCheck -notmatch 'portable-agent-realm.json' `
     -or $keycloakCheck -notmatch 'calendar:write') {
     throw "Runtime-проверка Keycloak должна сверять JWT с realm fixture."
 }
-$appCheck = Get-Content -Raw -LiteralPath "scripts/check-apps.ps1"
-if ($appCheck -notmatch 'ConvertFrom-Json -DateKind String') {
-    throw "check-apps.ps1 должен сохранять исходные смещения времени из JSON."
+$testLabRunnerPath = "scripts/run-test-lab.ps1"
+if (-not (Test-Path -LiteralPath $testLabRunnerPath)) {
+    throw "Нет адаптера запуска сценариев из test-lab."
 }
-foreach ($required in @("CHANNEL_GATEWAY_PORT", "/api/v1/messages", "requestKey", "requiresApproval", "proposalId")) {
-    if ($appCheck -notmatch [regex]::Escape($required)) {
-        throw "Сквозная проверка приложений не использует Agent Runtime: нет $required."
+if (Test-Path -LiteralPath "scripts/check-apps.ps1") {
+    throw "Продуктовый E2E не должен дублироваться в deploy."
+}
+$testLabRunner = Get-Content -Raw -LiteralPath $testLabRunnerPath
+foreach ($required in @("TEST_LAB_PATH", "portable-agent-realm.json", "CALENDAR_TEST_API_KEY", "task", "test:e2e")) {
+    if ($testLabRunner -notmatch [regex]::Escape($required)) {
+        throw "Адаптер test-lab не содержит $required."
     }
 }
 $versions = Get-Content -Raw -LiteralPath "config/versions.env"
@@ -189,17 +193,15 @@ if ($versions -notmatch '(?m)^AGENT_RUNTIME_IMAGE=ghcr\.io/portable-agent/agent-
 if ($versions -notmatch '(?m)^CHANNEL_GATEWAY_IMAGE=ghcr\.io/portable-agent/channel-gateway:[0-9a-f]{40}\r?$') {
     throw "Channel Gateway image должен быть закреплён полным Git SHA."
 }
-foreach ($oldName in @("utterance", "actor_id", "available_connectors", "requires_approval")) {
-    if ($appCheck -match [regex]::Escape($oldName)) {
-        throw "Сквозная проверка приложений содержит старое поле $oldName."
-    }
+if ($versions -notmatch '(?m)^TEST_LAB_REF=[0-9a-f]{40}\r?$') {
+    throw "Test Lab должен быть закреплён полным Git SHA."
 }
 $appWorkflowPath = ".github/workflows/app-smoke.yml"
 if (-not (Test-Path -LiteralPath $appWorkflowPath)) {
     throw "Нет CI-проверки полного Compose-среза."
 }
 $appWorkflow = Get-Content -Raw -LiteralPath $appWorkflowPath
-foreach ($required in @("versions.env", "channel-gateway", "agent-runtime", "start-local.ps1 -Apps", "check-apps.ps1", "stop-local.ps1 -DeleteData", "if: always()")) {
+foreach ($required in @("versions.env", "channel-gateway", "agent-runtime", "repository: portable-agent/test-lab", 'ref: ${{ steps.versions.outputs.test_lab }}', "start-local.ps1 -Apps", "run-test-lab.ps1", "stop-local.ps1 -DeleteData", "if: always()")) {
     if ($appWorkflow -notmatch [regex]::Escape($required)) {
         throw "CI-проверка полного среза не содержит $required."
     }

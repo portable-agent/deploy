@@ -72,7 +72,7 @@ tasks:
     desc: Поднять полный срез и выполнить сквозной тест встречи
     cmds:
       - task: services:up
-      - '{{.POWERSHELL}} {{.POWERSHELL_ARGS}} -File ./scripts/check-apps.ps1'
+      - '{{.POWERSHELL}} {{.POWERSHELL_ARGS}} -File ./scripts/run-test-lab.ps1'
 
   verify:
     desc: Выполнить локальные проверки конфигурации и документации
