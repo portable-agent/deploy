@@ -2,7 +2,7 @@
     [Parameter(Mandatory = $true)]
     [ValidateSet("Status", "Stop", "Restart", "Logs")]
     [string]$Action,
-    [ValidateSet("channel-gateway", "agent-runtime", "action-service", "mcp-gateway", "calendar-mcp")]
+    [ValidateSet("channel-gateway", "agent-runtime", "action-service", "conversation-service", "mcp-gateway", "calendar-mcp")]
     [string]$Service,
     [ValidateRange(1, 10000)]
     [int]$Tail = 100

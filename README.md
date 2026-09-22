@@ -8,7 +8,7 @@
 Платформа разработки включает:
 
 - Compose-профиль `core`: PostgreSQL, Redpanda, Keycloak, Temporal и OPA;
-- Compose-профиль `apps`: Channel Gateway, Agent Runtime, Action Service, MCP Gateway и Calendar MCP;
+- Compose-профиль `apps`: Channel Gateway, Conversation Service, Agent Runtime, Action Service, MCP Gateway и Calendar MCP;
 - Compose-профиль `observe`: OpenTelemetry, Prometheus, Grafana, Tempo и Loki;
 - безопасный общий chart `charts/service`;
 - изолированный PR preview namespace с quota, limits и default-deny сетью;
@@ -74,12 +74,14 @@ Compose project и всегда удаляет только созданные �
 
 `-Apps` собирает образы из соседних локальных репозиториев через `compose/apps.local.yaml`. Пути можно
 переопределить переменными `CHANNEL_GATEWAY_CONTEXT`, `AGENT_RUNTIME_CONTEXT`, `ACTION_SERVICE_CONTEXT`,
-`MCP_GATEWAY_CONTEXT` и `CALENDAR_MCP_CONTEXT`; вход в GHCR для локального запуска не нужен.
+`CONVERSATION_SERVICE_CONTEXT`, `MCP_GATEWAY_CONTEXT` и `CALENDAR_MCP_CONTEXT`; вход в GHCR для локального
+запуска не нужен.
 `TEST_LAB_PATH` по умолчанию указывает на соседний `../portable-agent-test-lab`; путь можно
 переопределить в `.env`. Channel Gateway доступен на `http://localhost:18084`, Agent Runtime — на
 `http://localhost:18080`, Action API — на
 `http://localhost:18081`, MCP Gateway — на `http://localhost:18083`, а Calendar MCP — на
-`http://localhost:18082`.
+`http://localhost:18082`. Conversation Service доступен на `http://localhost:18085`; пока Channel Gateway
+ещё обращается к Agent Runtime напрямую, поэтому сервис можно проверять отдельно перед переключением маршрута.
 
 Файл `.env` локальный и не коммитится. Значения `dev` и `stage` должны приходить из secret
 manager, а не из Git.
@@ -89,15 +91,15 @@ manager, а не из Git.
 в Compose fixture. Отдельный confidential client `action-service` выдаёт worker служебный токен с
 `tenant_id`, audience `mcp-gateway` и `calendar-mcp`, scopes `mcp:call` и `calendar:write`. Значения
 локального секрета и tenant приходят из `.env`, а не зашиты в image. PostgreSQL создаёт отдельную БД
-`actions` для Action Service.
+`actions` для Action Service и `conversations` для Conversation Service.
 
 Проверочный API Calendar MCP включён только в локальном профиле `apps`, привязан к loopback-порту и
 защищён `CALENDAR_TEST_API_KEY`. Хранилище fake-calendar пока находится в памяти: перезапуск контейнера
 очищает созданные тестовые встречи.
 
 После запуска скрипт получает настоящий JWT и сверяет пользователя, `tenant_id` и audience
-`channel-gateway`, `agent-runtime`, `action-service` и `calendar-mcp` с realm fixture. Один
-пользовательский токен проходит независимую проверку в Channel Gateway, Agent Runtime и Action API.
+`channel-gateway`, `conversation-service`, `agent-runtime`, `action-service` и `calendar-mcp` с realm fixture.
+Один пользовательский токен проходит независимую проверку во всех пользовательских API.
 Если Keycloak volume создан старой версией fixture, запуск остановится с командой для явного
 пересоздания локальных данных.
 

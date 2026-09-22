@@ -17,6 +17,12 @@ services:
       context: ${ACTION_SERVICE_CONTEXT:-../../portable-agent-action-service}
     pull_policy: build
 
+  conversation-service:
+    image: portable-agent/conversation-service:local
+    build:
+      context: ${CONVERSATION_SERVICE_CONTEXT:-../../portable-agent-conversation-service}
+    pull_policy: build
+
   mcp-gateway:
     image: portable-agent/mcp-gateway:local
     build:

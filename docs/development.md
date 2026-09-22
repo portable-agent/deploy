@@ -15,8 +15,17 @@ Taskfile — единая точка входа. Внутренние PowerShell
 4. Посмотри состояние через `task status`, логи — через `task service:logs SERVICE=<name>`.
 5. Перед pull request выполни `task test:e2e`.
 
-Допустимые имена: `channel-gateway`, `agent-runtime`, `action-service`, `mcp-gateway` и
-`calendar-mcp`. Неизвестное имя отклоняется до вызова Docker.
+Допустимые имена: `channel-gateway`, `conversation-service`, `agent-runtime`, `action-service`,
+`mcp-gateway` и `calendar-mcp`. Неизвестное имя отклоняется до вызова Docker.
+
+Например, для локальной проверки HTTP-потока диалога выполни:
+
+```powershell
+task service:up SERVICE=conversation-service
+```
+
+Compose соберёт сервис из соседнего репозитория, поднимет PostgreSQL, Keycloak, Agent Runtime и
+Action Service. Отдельно запускать его зависимости не нужно.
 
 `task test:e2e` поднимает полный локальный срез и ждёт healthchecks. Затем `deploy` вызывает
 `task test:e2e` в соседнем репозитории `test-lab`, который владеет black-box сценарием от текста до

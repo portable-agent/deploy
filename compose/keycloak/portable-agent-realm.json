@@ -73,6 +73,13 @@
       "protocol": "openid-connect"
     },
     {
+      "clientId": "conversation-service",
+      "name": "Conversation Service Resource Server",
+      "enabled": true,
+      "bearerOnly": true,
+      "protocol": "openid-connect"
+    },
+    {
       "clientId": "action-service",
       "name": "Action Service Worker",
       "enabled": true,
@@ -180,6 +187,18 @@
           "consentRequired": false,
           "config": {
             "included.client.audience": "action-service",
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
+          "name": "conversation-service-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "conversation-service",
             "id.token.claim": "false",
             "access.token.claim": "true",
             "introspection.token.claim": "true"

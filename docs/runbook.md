@@ -19,12 +19,13 @@
 
 1. Выполни `task status`, затем `task verify`.
 2. Проверь, что рядом лежат репозитории `portable-agent-channel-gateway`, `portable-agent-agent-runtime`,
-   `portable-agent-action-service`, `portable-agent-mcp-gateway` и `portable-agent-calendar-mcp`,
+   `portable-agent-action-service`, `portable-agent-conversation-service`, `portable-agent-mcp-gateway`
+   и `portable-agent-calendar-mcp`,
    либо задай их `*_CONTEXT` в `.env`.
 3. Если Keycloak сообщает о старом fixture, локально выполни
    `task reset`. Команда запрашивает подтверждение и удаляет только volumes этого Compose project.
-4. Проверь `/health/live` Channel Gateway и Agent Runtime, `/actuator/health/readiness` Action Service и `/health`
-   двух MCP-сервисов.
+4. Проверь `/health/live` Channel Gateway и Agent Runtime, `/actuator/health/readiness` Action Service,
+   `/actuator/health` Conversation Service и `/health` двух MCP-сервисов.
 5. Не включай Calendar test API вне локального профиля `apps`.
 
 После запуска проверь весь backend-путь одной командой:
