@@ -87,6 +87,9 @@ foreach ($service in @("channel-gateway", "agent-runtime", "action-service", "co
 }
 if ($composeText -notmatch '(?ms)^  channel-gateway:.*?OIDC_AUDIENCE: channel-gateway' `
     -or $composeText -notmatch '(?ms)^  channel-gateway:.*?AGENT_URL: http://agent-runtime:8080' `
+    -or $composeText -notmatch '(?ms)^  channel-gateway:.*?CONVERSATION_URL: http://conversation-service:8080' `
+    -or $composeText -notmatch '(?ms)^  channel-gateway:.*?CONVERSATION_TIMEOUT_MS: 10000' `
+    -or $composeText -notmatch '(?ms)^  channel-gateway:.*?^    depends_on:.*?^      conversation-service:\s*\r?\n        condition: service_healthy' `
     -or $composeText -notmatch '(?ms)^  agent-runtime:.*?AGENT_OIDC_AUDIENCE: agent-runtime' `
     -or $composeText -notmatch '(?ms)^  agent-runtime:.*?AGENT_DOCS_ENABLED: "false"' `
     -or $composeText -notmatch '(?ms)^  action-service:.*?MCP_GATEWAY_URL: http://mcp-gateway:8080' `
@@ -97,7 +100,7 @@ if ($composeText -notmatch '(?ms)^  channel-gateway:.*?OIDC_AUDIENCE: channel-ga
     -or $composeText -notmatch '(?ms)^  conversation-service:.*?DB_URL: jdbc:postgresql://postgres:5432/conversations' `
     -or $composeText -notmatch '(?ms)^  conversation-service:.*?^    healthcheck:' `
     -or $composeText -notmatch '(?ms)^  mcp-gateway:.*?http://calendar-mcp:8080/mcp') {
-    throw "Compose не связывает Conversation Service с Agent Runtime и Action Service."
+    throw "Compose не связывает Channel Gateway, Conversation Service, Agent Runtime и Action Service."
 }
 if ($composeText -notmatch 'TEMPORAL_ADMIN_ADDRESS:-temporal:7233') {
     throw "Portable Compose должен обращаться к Temporal по имени сервиса."

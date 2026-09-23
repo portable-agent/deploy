@@ -31,6 +31,7 @@ services/catalog.json -> environments/<env>/services/<name>/values.yaml
 sequenceDiagram
     participant User as Пользователь
     participant Channel as Channel Gateway
+    participant Conversation as Conversation Service
     participant Agent as Agent Runtime
     participant Action as Action Service
     participant Keycloak
@@ -38,13 +39,18 @@ sequenceDiagram
     participant Calendar as Calendar MCP
 
     User->>Keycloak: логин
-    Keycloak-->>User: tenant + audience channel, agent и action
+    Keycloak-->>User: tenant + audience channel, conversation, agent и action
     User->>Channel: текст + безопасный context + JWT
-    Channel->>Channel: JWT + server connector list
-    Channel->>Agent: нормализованный текст + тот же JWT
+    Channel->>Channel: JWT + нормализация канала
+    Channel->>Conversation: сообщение + тот же JWT
+    Conversation->>Conversation: сохранить сообщение
+    Conversation->>Agent: текст + server connector list + тот же JWT
     Agent->>Agent: JWT + подготовка ActionPlan
-    Agent-->>User: proposal требует подтверждения
-    User->>Action: создать и подтвердить действие
+    Agent-->>Conversation: готовое предложение
+    Conversation->>Action: создать действие
+    Action-->>Conversation: actionId + payloadHash
+    Conversation-->>User: переносимый виджет подтверждения
+    User->>Action: подтвердить действие
     Action->>Action: JWT issuer + audience + tenant
     Action->>Keycloak: client_credentials
     Keycloak-->>Action: tenant + две audience + два scope
@@ -58,6 +64,7 @@ sequenceDiagram
 Canonical issuer локального realm доступен хосту через `localhost`. Контейнеры загружают JWKS по
 внутреннему имени `keycloak`, поэтому проверка токена не зависит от DNS хоста. `start-local -Apps`
 сначала поднимает зависимости и создаёт Temporal namespace, затем собирает и запускает приложения.
-Channel Gateway не зависит от Telegram и принимает общий текстовый контракт `2.2.0`. Agent Runtime не
-исполняет и не сохраняет действие. Он создаёт предложение по совместимому контракту `2.2.0`;
-после подтверждения Action Service становится источником состояния, аудита и Temporal workflow.
+Channel Gateway не зависит от Telegram и принимает общий контракт сообщения `2.4.0`. Conversation
+Service хранит состояние диалога, получает предложение от Agent Runtime, создаёт Action и возвращает
+каналу переносимый виджет. Agent Runtime не исполняет и не сохраняет действие. После подтверждения
+Action Service остаётся источником состояния, аудита и Temporal workflow.

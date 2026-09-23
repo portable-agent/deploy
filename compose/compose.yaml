@@ -210,6 +210,8 @@ services:
       AGENT_URL: http://agent-runtime:8080
       AGENT_TIMEOUT_MS: 5000
       AGENT_AVAILABLE_CONNECTORS: '["fake-calendar"]'
+      CONVERSATION_URL: http://conversation-service:8080
+      CONVERSATION_TIMEOUT_MS: 10000
       OIDC_ISSUER_URL: http://localhost:${KEYCLOAK_PORT:-8081}/realms/portable-agent
       OIDC_JWKS_URL: http://keycloak:8080/realms/portable-agent/protocol/openid-connect/certs
       OIDC_AUDIENCE: channel-gateway
@@ -217,6 +219,8 @@ services:
       keycloak:
         condition: service_healthy
       agent-runtime:
+        condition: service_healthy
+      conversation-service:
         condition: service_healthy
     ports:
       - "127.0.0.1:${CHANNEL_GATEWAY_PORT:-18084}:8080"

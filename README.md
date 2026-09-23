@@ -52,7 +52,7 @@ task service:up SERVICE=action-service
 task service:restart SERVICE=action-service
 ```
 
-Чтобы поднять и проверить путь `Channel → Agent → Action → Gateway → Calendar`, используй:
+Чтобы поднять и проверить путь `Channel → Conversation → Agent → Action → Gateway → Calendar`, используй:
 
 ```powershell
 task services:up
@@ -80,8 +80,9 @@ Compose project и всегда удаляет только созданные �
 переопределить в `.env`. Channel Gateway доступен на `http://localhost:18084`, Agent Runtime — на
 `http://localhost:18080`, Action API — на
 `http://localhost:18081`, MCP Gateway — на `http://localhost:18083`, а Calendar MCP — на
-`http://localhost:18082`. Conversation Service доступен на `http://localhost:18085`; пока Channel Gateway
-ещё обращается к Agent Runtime напрямую, поэтому сервис можно проверять отдельно перед переключением маршрута.
+`http://localhost:18082`. Conversation Service доступен на `http://localhost:18085`. Новый маршрут
+`/api/v1/conversations/messages` в Channel Gateway передаёт сообщения в него; старый маршрут
+`/api/v1/messages` временно сохранён для обратной совместимости.
 
 Файл `.env` локальный и не коммитится. Значения `dev` и `stage` должны приходить из secret
 manager, а не из Git.
