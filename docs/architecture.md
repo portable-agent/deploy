@@ -50,7 +50,8 @@ sequenceDiagram
     Conversation->>Action: создать действие
     Action-->>Conversation: actionId + payloadHash
     Conversation-->>User: переносимый виджет подтверждения
-    User->>Action: подтвердить действие
+    User->>Channel: подтвердить виджет
+    Channel->>Action: actionId + payloadHash + решение
     Action->>Action: JWT issuer + audience + tenant
     Action->>Keycloak: client_credentials
     Keycloak-->>Action: tenant + две audience + два scope

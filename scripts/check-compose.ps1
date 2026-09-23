@@ -89,7 +89,10 @@ if ($composeText -notmatch '(?ms)^  channel-gateway:.*?OIDC_AUDIENCE: channel-ga
     -or $composeText -notmatch '(?ms)^  channel-gateway:.*?AGENT_URL: http://agent-runtime:8080' `
     -or $composeText -notmatch '(?ms)^  channel-gateway:.*?CONVERSATION_URL: http://conversation-service:8080' `
     -or $composeText -notmatch '(?ms)^  channel-gateway:.*?CONVERSATION_TIMEOUT_MS: 10000' `
+    -or $composeText -notmatch '(?ms)^  channel-gateway:.*?ACTION_URL: http://action-service:8080' `
+    -or $composeText -notmatch '(?ms)^  channel-gateway:.*?ACTION_TIMEOUT_MS: 10000' `
     -or $composeText -notmatch '(?ms)^  channel-gateway:.*?^    depends_on:.*?^      conversation-service:\s*\r?\n        condition: service_healthy' `
+    -or $composeText -notmatch '(?ms)^  channel-gateway:.*?^    depends_on:.*?^      action-service:\s*\r?\n        condition: service_healthy' `
     -or $composeText -notmatch '(?ms)^  agent-runtime:.*?AGENT_OIDC_AUDIENCE: agent-runtime' `
     -or $composeText -notmatch '(?ms)^  agent-runtime:.*?AGENT_DOCS_ENABLED: "false"' `
     -or $composeText -notmatch '(?ms)^  action-service:.*?MCP_GATEWAY_URL: http://mcp-gateway:8080' `

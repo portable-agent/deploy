@@ -82,7 +82,9 @@ Compose project и всегда удаляет только созданные �
 `http://localhost:18081`, MCP Gateway — на `http://localhost:18083`, а Calendar MCP — на
 `http://localhost:18082`. Conversation Service доступен на `http://localhost:18085`. Новый маршрут
 `/api/v1/conversations/messages` в Channel Gateway передаёт сообщения в него; старый маршрут
-`/api/v1/messages` временно сохранён для обратной совместимости.
+`/api/v1/messages` временно сохранён для обратной совместимости. Решение confirmation-виджета
+отправляется в `/api/v1/actions/{actionId}/decisions` того же Gateway и только затем попадает в Action
+Service.
 
 Файл `.env` локальный и не коммитится. Значения `dev` и `stage` должны приходить из secret
 manager, а не из Git.
