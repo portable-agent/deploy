@@ -227,7 +227,7 @@ if (-not (Test-Path -LiteralPath $appWorkflowPath)) {
     throw "Нет CI-проверки полного Compose-среза."
 }
 $appWorkflow = Get-Content -Raw -LiteralPath $appWorkflowPath
-foreach ($required in @("versions.env", "channel-gateway", "agent-runtime", "repository: portable-agent/test-lab", 'ref: ${{ steps.versions.outputs.test_lab }}', "start-local.ps1 -Apps", "run-test-lab.ps1", "stop-local.ps1 -DeleteData", "if: always()")) {
+foreach ($required in @("versions.env", "channel-gateway", "agent-runtime", "CONVERSATION_SERVICE_CONTEXT", "repository: portable-agent/conversation-service", 'ref: ${{ steps.versions.outputs.conversation }}', "repository: portable-agent/test-lab", 'ref: ${{ steps.versions.outputs.test_lab }}', "start-local.ps1 -Apps", "run-test-lab.ps1", "stop-local.ps1 -DeleteData", "if: always()")) {
     if ($appWorkflow -notmatch [regex]::Escape($required)) {
         throw "CI-проверка полного среза не содержит $required."
     }
