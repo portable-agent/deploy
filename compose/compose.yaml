@@ -16,6 +16,8 @@ services:
       ACTION_DB_PASSWORD: ${ACTION_DB_PASSWORD:?set ACTION_DB_PASSWORD}
       CONVERSATION_DB_USER: ${CONVERSATION_DB_USER:?set CONVERSATION_DB_USER}
       CONVERSATION_DB_PASSWORD: ${CONVERSATION_DB_PASSWORD:?set CONVERSATION_DB_PASSWORD}
+      TELEGRAM_DB_USER: ${TELEGRAM_DB_USER:?set TELEGRAM_DB_USER}
+      TELEGRAM_DB_PASSWORD: ${TELEGRAM_DB_PASSWORD:?set TELEGRAM_DB_PASSWORD}
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
@@ -73,6 +75,7 @@ services:
       KC_HOSTNAME: http://localhost:${KEYCLOAK_PORT:-8081}
       ACTION_SERVICE_CLIENT_SECRET: ${ACTION_SERVICE_CLIENT_SECRET:?set ACTION_SERVICE_CLIENT_SECRET}
       ACTION_SERVICE_TENANT_ID: ${ACTION_SERVICE_TENANT_ID:?set ACTION_SERVICE_TENANT_ID}
+      TELEGRAM_ADAPTER_CLIENT_SECRET: ${TELEGRAM_ADAPTER_CLIENT_SECRET:?set TELEGRAM_ADAPTER_CLIENT_SECRET}
     depends_on:
       postgres:
         condition: service_healthy
@@ -109,6 +112,8 @@ services:
       ACTION_DB_PASSWORD: ${ACTION_DB_PASSWORD:?set ACTION_DB_PASSWORD}
       CONVERSATION_DB_USER: ${CONVERSATION_DB_USER:?set CONVERSATION_DB_USER}
       CONVERSATION_DB_PASSWORD: ${CONVERSATION_DB_PASSWORD:?set CONVERSATION_DB_PASSWORD}
+      TELEGRAM_DB_USER: ${TELEGRAM_DB_USER:?set TELEGRAM_DB_USER}
+      TELEGRAM_DB_PASSWORD: ${TELEGRAM_DB_PASSWORD:?set TELEGRAM_DB_PASSWORD}
     volumes:
       - ./postgres:/scripts:ro
     depends_on:
@@ -393,6 +398,54 @@ services:
       timeout: 3s
       retries: 30
       start_period: 20s
+    networks: [platform]
+
+  fake-telegram:
+    profiles: [apps]
+    image: ${WIREMOCK_IMAGE:?set WIREMOCK_IMAGE}
+    command: [--disable-banner]
+    volumes:
+      - ./telegram:/home/wiremock:ro
+    ports:
+      - "127.0.0.1:${TELEGRAM_FAKE_PORT:-18087}:8080"
+    networks: [platform]
+
+  telegram-adapter:
+    profiles: [apps]
+    image: ${TELEGRAM_ADAPTER_IMAGE:?set TELEGRAM_ADAPTER_IMAGE}
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8080
+      TELEGRAM_API_URL: http://fake-telegram:8080
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?set TELEGRAM_BOT_TOKEN}
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:?set TELEGRAM_WEBHOOK_SECRET}
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_REALM: portable-agent
+      KEYCLOAK_CLIENT_ID: telegram-adapter
+      KEYCLOAK_CLIENT_SECRET: ${TELEGRAM_ADAPTER_CLIENT_SECRET:?set TELEGRAM_ADAPTER_CLIENT_SECRET}
+      DATABASE_URL: postgres://${TELEGRAM_DB_USER:?set TELEGRAM_DB_USER}:${TELEGRAM_DB_PASSWORD:?set TELEGRAM_DB_PASSWORD}@postgres:5432/telegram_adapter
+      CHANNEL_GATEWAY_URL: http://channel-gateway:8080
+      CHANNEL_GATEWAY_TIMEOUT_MS: 10000
+      LINK_POLL_MS: 1000
+      DEFAULT_LOCALE: ru-RU
+      DEFAULT_TIME_ZONE: Europe/Moscow
+      TOKEN_KEY_BASE64: ${TELEGRAM_TOKEN_KEY_BASE64:?set TELEGRAM_TOKEN_KEY_BASE64}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      channel-gateway:
+        condition: service_healthy
+      fake-telegram:
+        condition: service_started
+    ports:
+      - "127.0.0.1:${TELEGRAM_ADAPTER_PORT:-18086}:8080"
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://localhost:8080/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
     networks: [platform]
 
   tempo:

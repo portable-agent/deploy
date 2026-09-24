@@ -8,7 +8,7 @@
 Платформа разработки включает:
 
 - Compose-профиль `core`: PostgreSQL, Redpanda, Keycloak, Temporal и OPA;
-- Compose-профиль `apps`: Channel Gateway, Conversation Service, Agent Runtime, Action Service, MCP Gateway и Calendar MCP;
+- Compose-профиль `apps`: Telegram Adapter, fake Telegram API, Channel Gateway, Conversation Service, Agent Runtime, Action Service, MCP Gateway и Calendar MCP;
 - Compose-профиль `observe`: OpenTelemetry, Prometheus, Grafana, Tempo и Loki;
 - безопасный общий chart `charts/service`;
 - изолированный PR preview namespace с quota, limits и default-deny сетью;
@@ -74,8 +74,12 @@ Compose project и всегда удаляет только созданные �
 
 `-Apps` собирает образы из соседних локальных репозиториев через `compose/apps.local.yaml`. Пути можно
 переопределить переменными `CHANNEL_GATEWAY_CONTEXT`, `AGENT_RUNTIME_CONTEXT`, `ACTION_SERVICE_CONTEXT`,
-`CONVERSATION_SERVICE_CONTEXT`, `MCP_GATEWAY_CONTEXT` и `CALENDAR_MCP_CONTEXT`; вход в GHCR для локального
-запуска не нужен.
+`CONVERSATION_SERVICE_CONTEXT`, `MCP_GATEWAY_CONTEXT`, `CALENDAR_MCP_CONTEXT` и
+`TELEGRAM_ADAPTER_CONTEXT`; вход в GHCR для локального запуска не нужен. Fake Telegram API отвечает
+локально и не требует настоящего bot token.
+Если в `.env` оставлен placeholder `derive-from-local-webhook-secret`, команда запуска получает
+стабильный локальный encryption key из webhook secret только в памяти процесса. Для любого общего
+окружения `TELEGRAM_TOKEN_KEY_BASE64` должен приходить отдельным случайным секретом.
 `TEST_LAB_PATH` по умолчанию указывает на соседний `../portable-agent-test-lab`; путь можно
 переопределить в `.env`. Channel Gateway доступен на `http://localhost:18084`, Agent Runtime — на
 `http://localhost:18080`, Action API — на
@@ -93,8 +97,10 @@ manager, а не из Git.
 `portable-agent-local` и пользователь `local-user` с паролем `local-user-change-me` существуют только
 в Compose fixture. Отдельный confidential client `action-service` выдаёт worker служебный токен с
 `tenant_id`, audience `mcp-gateway` и `calendar-mcp`, scopes `mcp:call` и `calendar:write`. Значения
-локального секрета и tenant приходят из `.env`, а не зашиты в image. PostgreSQL создаёт отдельную БД
-`actions` для Action Service и `conversations` для Conversation Service.
+локального секрета и tenant приходят из `.env`, а не зашиты в image. Отдельный confidential client
+`telegram-adapter` включает OAuth Device Authorization Grant и выдаёт пользовательский токен с теми
+же `tenant_id` и audience backend-пути. PostgreSQL создаёт отдельные БД `actions`, `conversations` и
+`telegram_adapter`.
 
 Проверочный API Calendar MCP включён только в локальном профиле `apps`, привязан к loopback-порту и
 защищён `CALENDAR_TEST_API_KEY`. Хранилище fake-calendar пока находится в памяти: перезапуск контейнера

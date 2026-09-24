@@ -10,6 +10,8 @@ set -eu
 : "${ACTION_DB_PASSWORD:?ACTION_DB_PASSWORD is required}"
 : "${CONVERSATION_DB_USER:?CONVERSATION_DB_USER is required}"
 : "${CONVERSATION_DB_PASSWORD:?CONVERSATION_DB_PASSWORD is required}"
+: "${TELEGRAM_DB_USER:?TELEGRAM_DB_USER is required}"
+: "${TELEGRAM_DB_PASSWORD:?TELEGRAM_DB_PASSWORD is required}"
 
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
   --set=keycloak_user="$KEYCLOAK_DB_USER" \
@@ -19,7 +21,9 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
   --set=action_user="$ACTION_DB_USER" \
   --set=action_password="$ACTION_DB_PASSWORD" \
   --set=conversation_user="$CONVERSATION_DB_USER" \
-  --set=conversation_password="$CONVERSATION_DB_PASSWORD" <<-'SQL'
+  --set=conversation_password="$CONVERSATION_DB_PASSWORD" \
+  --set=telegram_user="$TELEGRAM_DB_USER" \
+  --set=telegram_password="$TELEGRAM_DB_PASSWORD" <<-'SQL'
 SELECT format('CREATE ROLE %I LOGIN PASSWORD %L', :'keycloak_user', :'keycloak_password')
 WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'keycloak_user') \gexec
 SELECT format('ALTER ROLE %I WITH LOGIN PASSWORD %L', :'keycloak_user', :'keycloak_password') \gexec
@@ -44,4 +48,11 @@ SELECT format('ALTER ROLE %I WITH LOGIN PASSWORD %L', :'conversation_user', :'co
 
 SELECT format('CREATE DATABASE conversations OWNER %I', :'conversation_user')
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'conversations') \gexec
+
+SELECT format('CREATE ROLE %I LOGIN PASSWORD %L', :'telegram_user', :'telegram_password')
+WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'telegram_user') \gexec
+SELECT format('ALTER ROLE %I WITH LOGIN PASSWORD %L', :'telegram_user', :'telegram_password') \gexec
+
+SELECT format('CREATE DATABASE telegram_adapter OWNER %I', :'telegram_user')
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'telegram_adapter') \gexec
 SQL
