@@ -34,3 +34,9 @@ services:
     build:
       context: ${CALENDAR_MCP_CONTEXT:-../../portable-agent-calendar-mcp}
     pull_policy: build
+
+  telegram-adapter:
+    image: portable-agent/telegram-adapter:local
+    build:
+      context: ${TELEGRAM_ADAPTER_CONTEXT:-../../portable-agent-telegram-adapter}
+    pull_policy: build

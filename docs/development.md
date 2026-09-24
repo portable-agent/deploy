@@ -16,7 +16,7 @@ Taskfile — единая точка входа. Внутренние PowerShell
 5. Перед pull request выполни `task test:e2e`.
 
 Допустимые имена: `channel-gateway`, `conversation-service`, `agent-runtime`, `action-service`,
-`mcp-gateway` и `calendar-mcp`. Неизвестное имя отклоняется до вызова Docker.
+`mcp-gateway`, `calendar-mcp` и `telegram-adapter`. Неизвестное имя отклоняется до вызова Docker.
 
 Например, для локальной проверки HTTP-потока диалога выполни:
 
@@ -26,6 +26,15 @@ task service:up SERVICE=conversation-service
 
 Compose соберёт сервис из соседнего репозитория, поднимет PostgreSQL, Keycloak, Agent Runtime и
 Action Service. Отдельно запускать его зависимости не нужно.
+
+Для работы над Telegram Adapter используй ту же команду:
+
+```powershell
+task service:up SERVICE=telegram-adapter
+```
+
+Она поднимет PostgreSQL, Keycloak, Channel Gateway и локальный fake Telegram API. Настоящий Telegram
+bot token для разработки и CI не требуется.
 
 `task test:e2e` поднимает полный локальный срез и ждёт healthchecks. Затем `deploy` вызывает
 `task test:e2e` в соседнем репозитории `test-lab`, который владеет black-box сценарием от текста до

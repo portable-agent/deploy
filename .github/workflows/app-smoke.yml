@@ -12,6 +12,7 @@ on:
       - "scripts/run-test-lab.ps1"
       - "scripts/check-compose.ps1"
       - "scripts/check-keycloak.ps1"
+      - "scripts/local-settings.ps1"
       - "scripts/start-local.ps1"
       - "scripts/service-local.ps1"
       - "scripts/stop-local.ps1"
@@ -32,6 +33,7 @@ jobs:
       CONVERSATION_SERVICE_CONTEXT: ${{ github.workspace }}/repos/conversation-service
       MCP_GATEWAY_CONTEXT: ${{ github.workspace }}/repos/mcp-gateway
       CALENDAR_MCP_CONTEXT: ${{ github.workspace }}/repos/calendar-mcp
+      TELEGRAM_ADAPTER_CONTEXT: ${{ github.workspace }}/repos/telegram-adapter
       TEST_LAB_PATH: ${{ github.workspace }}/repos/test-lab
     steps:
       - name: Получить deploy
@@ -48,6 +50,7 @@ jobs:
           "conversation=$($versions.CONVERSATION_SERVICE_IMAGE.Split(':')[-1])" >> $env:GITHUB_OUTPUT
           "gateway=$($versions.MCP_GATEWAY_IMAGE.Split(':')[-1])" >> $env:GITHUB_OUTPUT
           "calendar=$($versions.CALENDAR_MCP_IMAGE.Split(':')[-1])" >> $env:GITHUB_OUTPUT
+          "telegram=$($versions.TELEGRAM_ADAPTER_IMAGE.Split(':')[-1])" >> $env:GITHUB_OUTPUT
           "test_lab=$($versions.TEST_LAB_REF)" >> $env:GITHUB_OUTPUT
 
       - name: Получить Channel Gateway
@@ -91,6 +94,13 @@ jobs:
           repository: portable-agent/calendar-mcp
           ref: ${{ steps.versions.outputs.calendar }}
           path: repos/calendar-mcp
+
+      - name: Получить Telegram Adapter
+        uses: actions/checkout@v7
+        with:
+          repository: portable-agent/telegram-adapter
+          ref: ${{ steps.versions.outputs.telegram }}
+          path: repos/telegram-adapter
 
       - name: Получить Test Lab
         uses: actions/checkout@v7

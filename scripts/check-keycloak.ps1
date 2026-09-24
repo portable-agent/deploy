@@ -1,6 +1,7 @@
 ﻿param(
     [Parameter(Mandatory = $true)][string]$BaseUrl,
     [Parameter(Mandatory = $true)][string]$ServiceSecret,
+    [Parameter(Mandatory = $true)][string]$TelegramSecret,
     [Parameter(Mandatory = $true)][string]$ExpectedTenant
 )
 $ErrorActionPreference = "Stop"
@@ -10,6 +11,7 @@ $client = $realm.clients | Where-Object clientId -eq "portable-agent-local"
 $user = $realm.users | Where-Object username -eq "local-user"
 $password = ($user.credentials | Where-Object type -eq "password").value
 $serviceClient = $realm.clients | Where-Object clientId -eq "action-service"
+$telegramClient = $realm.clients | Where-Object clientId -eq "telegram-adapter"
 
 try {
     $tokenResponse = Invoke-RestMethod -Method Post `
@@ -52,6 +54,17 @@ try {
         -or $serviceScopes -notcontains "mcp:call" `
         -or $serviceScopes -notcontains "calendar:write") {
         throw "Service token action-service не содержит нужные claims."
+    }
+
+    $device = Invoke-RestMethod -Method Post `
+        -Uri "$BaseUrl/realms/$($realm.realm)/protocol/openid-connect/auth/device" `
+        -Body @{
+            client_id = $telegramClient.clientId
+            client_secret = $TelegramSecret
+            scope = "openid offline_access"
+        }
+    if (-not $device.device_code -or -not $device.user_code -or -not $device.verification_uri) {
+        throw "Device Flow telegram-adapter не вернул обязательные поля."
     }
 } catch {
     throw "Локальный Keycloak не соответствует compose/keycloak/portable-agent-realm.json. Для обновления тестовых данных выполни './scripts/stop-local.ps1 -DeleteData', затем запусти стенд снова. Причина: $($_.Exception.Message)"

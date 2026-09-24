@@ -42,6 +42,19 @@ $actionClient = $realm.clients | Where-Object clientId -eq "action-service"
 if (-not $actionClient -or -not $actionClient.serviceAccountsEnabled -or $actionClient.publicClient) {
     throw "Нет confidential service account client action-service."
 }
+$telegramClient = $realm.clients | Where-Object clientId -eq "telegram-adapter"
+if (-not $telegramClient -or $telegramClient.publicClient `
+    -or $telegramClient.attributes.'oauth2.device.authorization.grant.enabled' -ne "true") {
+    throw "Нет confidential Device Flow client telegram-adapter."
+}
+$telegramAudiences = @($telegramClient.protocolMappers | ForEach-Object { $_.config.'included.client.audience' })
+$telegramTenantMapper = $telegramClient.protocolMappers | Where-Object { $_.config.'claim.name' -eq "tenant_id" }
+if (-not $telegramTenantMapper -or $telegramAudiences -notcontains "channel-gateway" `
+    -or $telegramAudiences -notcontains "conversation-service" `
+    -or $telegramAudiences -notcontains "agent-runtime" `
+    -or $telegramAudiences -notcontains "action-service") {
+    throw "Device Flow token не содержит tenant_id и audience пользовательского пути."
+}
 $exampleTenant = (Get-Content -LiteralPath ".env.example" | Where-Object { $_ -match '^ACTION_SERVICE_TENANT_ID=' }).Split('=', 2)[1]
 if ($exampleTenant -notmatch '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$') {
     throw "Локальный tenant должен быть RFC-совместимым UUID."
@@ -85,6 +98,27 @@ foreach ($service in @("channel-gateway", "agent-runtime", "action-service", "co
         throw "В Compose нет приложения $service."
     }
 }
+foreach ($service in @("telegram-adapter", "fake-telegram")) {
+    if ($composeText -notmatch "(?m)^  $([regex]::Escape($service)):") {
+        throw "В Compose нет Telegram-компонента $service."
+    }
+}
+if ($composeText -notmatch '(?ms)^  telegram-adapter:.*?TELEGRAM_API_URL: http://fake-telegram:8080' `
+    -or $composeText -notmatch '(?ms)^  telegram-adapter:.*?CHANNEL_GATEWAY_URL: http://channel-gateway:8080' `
+    -or $composeText -notmatch '(?ms)^  telegram-adapter:.*?DATABASE_URL: postgres://.*@postgres:5432/telegram_adapter' `
+    -or $composeText -notmatch '(?ms)^  telegram-adapter:.*?^    healthcheck:') {
+    throw "Compose не связывает Telegram Adapter с локальными зависимостями."
+}
+$telegramMappingPath = "compose/telegram/mappings/bot-api.json"
+if (-not (Test-Path -LiteralPath $telegramMappingPath)) {
+    throw "Нет безопасной заглушки Telegram Bot API."
+}
+$telegramMapping = Get-Content -Raw -LiteralPath $telegramMappingPath | ConvertFrom-Json
+if ($telegramMapping.request.method -ne "POST" `
+    -or $telegramMapping.request.urlPathPattern -notmatch 'sendMessage' `
+    -or $telegramMapping.request.urlPathPattern -notmatch 'answerCallbackQuery') {
+    throw "Fake Telegram API не поддерживает ответы адаптера."
+}
 if ($composeText -notmatch '(?ms)^  channel-gateway:.*?OIDC_AUDIENCE: channel-gateway' `
     -or $composeText -notmatch '(?ms)^  channel-gateway:.*?AGENT_URL: http://agent-runtime:8080' `
     -or $composeText -notmatch '(?ms)^  channel-gateway:.*?CONVERSATION_URL: http://conversation-service:8080' `
@@ -127,8 +161,10 @@ if ($postgresBootstrap -notmatch 'exec /bin/sh /scripts/init/01-users\.sh') {
 $postgresInit = Get-Content -Raw -LiteralPath "compose/postgres/init/01-users.sh"
 if ($postgresInit -notmatch 'CONVERSATION_DB_USER' `
     -or $postgresInit -notmatch 'CONVERSATION_DB_PASSWORD' `
-    -or $postgresInit -notmatch 'CREATE DATABASE conversations') {
-    throw "PostgreSQL bootstrap не создаёт отдельную БД Conversation Service."
+    -or $postgresInit -notmatch 'CREATE DATABASE conversations' `
+    -or $postgresInit -notmatch 'TELEGRAM_DB_USER' `
+    -or $postgresInit -notmatch 'CREATE DATABASE telegram_adapter') {
+    throw "PostgreSQL bootstrap не создаёт отдельные БД приложений."
 }
 if ($startScript -notmatch 'scripts/check-keycloak.ps1') {
     throw "После запуска нужна runtime-проверка Keycloak fixture."
@@ -138,6 +174,11 @@ if ($startScript -notmatch '\[switch\]\$Apps' -or $startScript -notmatch '"apps"
 }
 if ($startScript -notmatch 'compose/apps.local.yaml' -or $startScript -notmatch 'up -d --build --wait') {
     throw "Локальные приложения должны собираться из соседних репозиториев."
+}
+$localSettings = Get-Content -Raw -LiteralPath "scripts/local-settings.ps1"
+if ($localSettings -notmatch 'SHA256' -or $localSettings -notmatch 'TELEGRAM_TOKEN_KEY_BASE64' `
+    -or $localSettings -notmatch 'TELEGRAM_WEBHOOK_SECRET') {
+    throw "Локальный encryption key Telegram Adapter должен создаваться вне Git."
 }
 $taskfilePath = "Taskfile.yml"
 if (-not (Test-Path -LiteralPath $taskfilePath)) {
@@ -181,7 +222,7 @@ foreach ($action in @("Status", "Stop", "Restart", "Logs")) {
     }
 }
 $appsOverride = Get-Content -Raw -LiteralPath "compose/apps.local.yaml"
-foreach ($image in @("portable-agent/channel-gateway:local", "portable-agent/agent-runtime:local", "portable-agent/action-service:local", "portable-agent/conversation-service:local", "portable-agent/mcp-gateway:local", "portable-agent/calendar-mcp:local")) {
+foreach ($image in @("portable-agent/channel-gateway:local", "portable-agent/agent-runtime:local", "portable-agent/action-service:local", "portable-agent/conversation-service:local", "portable-agent/mcp-gateway:local", "portable-agent/calendar-mcp:local", "portable-agent/telegram-adapter:local")) {
     if ($appsOverride -notmatch [regex]::Escape($image)) {
         throw "Local override не задаёт отдельный image tag $image."
     }
@@ -219,6 +260,9 @@ if ($versions -notmatch '(?m)^AGENT_RUNTIME_IMAGE=ghcr\.io/portable-agent/agent-
 if ($versions -notmatch '(?m)^CHANNEL_GATEWAY_IMAGE=ghcr\.io/portable-agent/channel-gateway:[0-9a-f]{40}\r?$') {
     throw "Channel Gateway image должен быть закреплён полным Git SHA."
 }
+if ($versions -notmatch '(?m)^TELEGRAM_ADAPTER_IMAGE=ghcr\.io/portable-agent/telegram-adapter:[0-9a-f]{40}\r?$') {
+    throw "Telegram Adapter image должен быть закреплён полным Git SHA."
+}
 if ($versions -notmatch '(?m)^TEST_LAB_REF=[0-9a-f]{40}\r?$') {
     throw "Test Lab должен быть закреплён полным Git SHA."
 }
@@ -227,7 +271,7 @@ if (-not (Test-Path -LiteralPath $appWorkflowPath)) {
     throw "Нет CI-проверки полного Compose-среза."
 }
 $appWorkflow = Get-Content -Raw -LiteralPath $appWorkflowPath
-foreach ($required in @("versions.env", "channel-gateway", "agent-runtime", "CONVERSATION_SERVICE_CONTEXT", "repository: portable-agent/conversation-service", 'ref: ${{ steps.versions.outputs.conversation }}', "repository: portable-agent/test-lab", 'ref: ${{ steps.versions.outputs.test_lab }}', "start-local.ps1 -Apps", "run-test-lab.ps1", "stop-local.ps1 -DeleteData", "if: always()")) {
+foreach ($required in @("versions.env", "channel-gateway", "agent-runtime", "CONVERSATION_SERVICE_CONTEXT", "repository: portable-agent/conversation-service", 'ref: ${{ steps.versions.outputs.conversation }}', "TELEGRAM_ADAPTER_CONTEXT", "repository: portable-agent/telegram-adapter", 'ref: ${{ steps.versions.outputs.telegram }}', "repository: portable-agent/test-lab", 'ref: ${{ steps.versions.outputs.test_lab }}', "start-local.ps1 -Apps", "run-test-lab.ps1", "stop-local.ps1 -DeleteData", "if: always()")) {
     if ($appWorkflow -notmatch [regex]::Escape($required)) {
         throw "CI-проверка полного среза не содержит $required."
     }

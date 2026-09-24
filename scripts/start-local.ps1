@@ -1,26 +1,18 @@
 ﻿param(
     [switch]$Observe,
     [switch]$Apps,
-    [ValidateSet("channel-gateway", "agent-runtime", "action-service", "conversation-service", "mcp-gateway", "calendar-mcp")]
+    [ValidateSet("channel-gateway", "agent-runtime", "action-service", "conversation-service", "mcp-gateway", "calendar-mcp", "telegram-adapter")]
     [string]$Service
 )
 $ErrorActionPreference = "Stop"
 if ($Apps -and $Service) { throw "Используй -Apps или -Service, но не оба параметра одновременно." }
+. "$PSScriptRoot/local-settings.ps1"
 $envFiles = @("--env-file", ".env.example", "--env-file", "config/versions.env")
 if (Test-Path .env) { $envFiles += @("--env-file", ".env") }
 $composeFiles = @("-f", "compose/compose.yaml")
 $runningOnWindows = $PSVersionTable.PSEdition -eq "Desktop" -or $IsWindows
 if ($runningOnWindows) { $composeFiles += @("-f", "compose/windows.local.yaml") }
-function Get-LocalSetting([string]$Name) {
-    $value = [Environment]::GetEnvironmentVariable($Name)
-    foreach ($path in @(".env", ".env.example")) {
-        if ($value -or -not (Test-Path -LiteralPath $path)) { continue }
-        $line = Get-Content -LiteralPath $path | Where-Object { $_ -match "^$([regex]::Escape($Name))=" } | Select-Object -Last 1
-        if ($line) { $value = $line.Substring($line.IndexOf('=') + 1) }
-    }
-    if (-not $value) { throw "Не задан $Name." }
-    return $value
-}
+Initialize-LocalTelegramKey
 $coreProfiles = @("--profile", "core")
 if ($Observe) { $coreProfiles += @("--profile", "observe") }
 & docker compose @envFiles @composeFiles @coreProfiles run --rm postgres-bootstrap
@@ -33,6 +25,7 @@ $keycloakAddress = & docker compose @envFiles @composeFiles port keycloak 8080
 if ($LASTEXITCODE -ne 0 -or -not $keycloakAddress) { throw "Не удалось определить адрес Keycloak." }
 $keycloakPort = $keycloakAddress.Trim().Split(':')[-1]
 $serviceSecret = Get-LocalSetting "ACTION_SERVICE_CLIENT_SECRET"
+$telegramSecret = Get-LocalSetting "TELEGRAM_ADAPTER_CLIENT_SECRET"
 $tenantId = Get-LocalSetting "ACTION_SERVICE_TENANT_ID"
 if ($tenantId -notmatch '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$') {
     throw "ACTION_SERVICE_TENANT_ID должен быть RFC-совместимым UUID."
@@ -40,6 +33,7 @@ if ($tenantId -notmatch '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89a
 & ./scripts/check-keycloak.ps1 `
     -BaseUrl "http://localhost:$keycloakPort" `
     -ServiceSecret $serviceSecret `
+    -TelegramSecret $telegramSecret `
     -ExpectedTenant $tenantId
 if ($LASTEXITCODE -ne 0) { throw "Локальный Keycloak не прошёл runtime-проверку." }
 if ($Apps) {

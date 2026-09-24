@@ -30,6 +30,7 @@ services/catalog.json -> environments/<env>/services/<name>/values.yaml
 ```mermaid
 sequenceDiagram
     participant User as Пользователь
+    participant Telegram as Telegram Adapter
     participant Channel as Channel Gateway
     participant Conversation as Conversation Service
     participant Agent as Agent Runtime
@@ -38,9 +39,13 @@ sequenceDiagram
     participant Gateway as MCP Gateway
     participant Calendar as Calendar MCP
 
-    User->>Keycloak: логин
-    Keycloak-->>User: tenant + audience channel, conversation, agent и action
-    User->>Channel: текст + безопасный context + JWT
+    User->>Telegram: /link
+    Telegram->>Keycloak: начать Device Flow
+    Keycloak-->>User: ссылка и одноразовый код
+    User->>Keycloak: логин в браузере
+    Keycloak-->>Telegram: refresh token + tenant + audience
+    User->>Telegram: текст
+    Telegram->>Channel: текст + безопасный context + JWT
     Channel->>Channel: JWT + нормализация канала
     Channel->>Conversation: сообщение + тот же JWT
     Conversation->>Conversation: сохранить сообщение
@@ -49,8 +54,10 @@ sequenceDiagram
     Agent-->>Conversation: готовое предложение
     Conversation->>Action: создать действие
     Action-->>Conversation: actionId + payloadHash
-    Conversation-->>User: переносимый виджет подтверждения
-    User->>Channel: подтвердить виджет
+    Conversation-->>Telegram: переносимый виджет подтверждения
+    Telegram-->>User: inline-кнопки
+    User->>Telegram: подтвердить виджет
+    Telegram->>Channel: решение + JWT
     Channel->>Action: actionId + payloadHash + решение
     Action->>Action: JWT issuer + audience + tenant
     Action->>Keycloak: client_credentials
