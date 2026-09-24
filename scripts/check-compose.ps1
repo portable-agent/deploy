@@ -34,6 +34,10 @@ $gatewayClient = $realm.clients | Where-Object clientId -eq "mcp-gateway"
 if (-not $gatewayClient -or -not $gatewayClient.bearerOnly) {
     throw "Нет resource server client mcp-gateway."
 }
+$conversationClient = $realm.clients | Where-Object clientId -eq "conversation-service"
+if (-not $conversationClient -or -not $conversationClient.bearerOnly) {
+    throw "Нет resource server client conversation-service."
+}
 $actionClient = $realm.clients | Where-Object clientId -eq "action-service"
 if (-not $actionClient -or -not $actionClient.serviceAccountsEnabled -or $actionClient.publicClient) {
     throw "Нет confidential service account client action-service."
@@ -54,8 +58,9 @@ if (-not $gatewayScope -or $actionClient.defaultClientScopes -notcontains "mcp:c
 $localAudiences = @($localClient.protocolMappers | ForEach-Object { $_.config.'included.client.audience' })
 if ($localAudiences -notcontains "channel-gateway" -or $localAudiences -notcontains "agent-runtime" `
     -or $localAudiences -notcontains "action-service" `
+    -or $localAudiences -notcontains "conversation-service" `
     -or $localAudiences -notcontains "calendar-mcp") {
-    throw "Локальный JWT не получает audience channel-gateway, agent-runtime, action-service и calendar-mcp."
+    throw "Локальный JWT не получает audience всех пользовательских сервисов."
 }
 $tenantMapper = $localClient.protocolMappers | Where-Object { $_.config.'claim.name' -eq "tenant_id" }
 if (-not $tenantMapper) {
@@ -75,19 +80,30 @@ $composeText = Get-Content -Raw -LiteralPath "compose/compose.yaml"
 if ($composeText -notmatch '(?ms)^  keycloak:.*?^    healthcheck:') {
     throw "У Keycloak нет readiness healthcheck."
 }
-foreach ($service in @("channel-gateway", "agent-runtime", "action-service", "mcp-gateway", "calendar-mcp")) {
+foreach ($service in @("channel-gateway", "agent-runtime", "action-service", "conversation-service", "mcp-gateway", "calendar-mcp")) {
     if ($composeText -notmatch "(?m)^  $([regex]::Escape($service)):") {
         throw "В Compose нет приложения $service."
     }
 }
 if ($composeText -notmatch '(?ms)^  channel-gateway:.*?OIDC_AUDIENCE: channel-gateway' `
     -or $composeText -notmatch '(?ms)^  channel-gateway:.*?AGENT_URL: http://agent-runtime:8080' `
+    -or $composeText -notmatch '(?ms)^  channel-gateway:.*?CONVERSATION_URL: http://conversation-service:8080' `
+    -or $composeText -notmatch '(?ms)^  channel-gateway:.*?CONVERSATION_TIMEOUT_MS: 10000' `
+    -or $composeText -notmatch '(?ms)^  channel-gateway:.*?ACTION_URL: http://action-service:8080' `
+    -or $composeText -notmatch '(?ms)^  channel-gateway:.*?ACTION_TIMEOUT_MS: 10000' `
+    -or $composeText -notmatch '(?ms)^  channel-gateway:.*?^    depends_on:.*?^      conversation-service:\s*\r?\n        condition: service_healthy' `
+    -or $composeText -notmatch '(?ms)^  channel-gateway:.*?^    depends_on:.*?^      action-service:\s*\r?\n        condition: service_healthy' `
     -or $composeText -notmatch '(?ms)^  agent-runtime:.*?AGENT_OIDC_AUDIENCE: agent-runtime' `
     -or $composeText -notmatch '(?ms)^  agent-runtime:.*?AGENT_DOCS_ENABLED: "false"' `
     -or $composeText -notmatch '(?ms)^  action-service:.*?MCP_GATEWAY_URL: http://mcp-gateway:8080' `
     -or $composeText -notmatch '(?ms)^  action-service:.*?OIDC_AUDIENCE: action-service' `
+    -or $composeText -notmatch '(?ms)^  conversation-service:.*?OIDC_AUDIENCE: conversation-service' `
+    -or $composeText -notmatch '(?ms)^  conversation-service:.*?AGENT_URL: http://agent-runtime:8080' `
+    -or $composeText -notmatch '(?ms)^  conversation-service:.*?ACTION_URL: http://action-service:8080' `
+    -or $composeText -notmatch '(?ms)^  conversation-service:.*?DB_URL: jdbc:postgresql://postgres:5432/conversations' `
+    -or $composeText -notmatch '(?ms)^  conversation-service:.*?^    healthcheck:' `
     -or $composeText -notmatch '(?ms)^  mcp-gateway:.*?http://calendar-mcp:8080/mcp') {
-    throw "Compose не связывает Agent Runtime, Action Service, MCP Gateway и Calendar MCP."
+    throw "Compose не связывает Channel Gateway, Conversation Service, Agent Runtime и Action Service."
 }
 if ($composeText -notmatch 'TEMPORAL_ADMIN_ADDRESS:-temporal:7233') {
     throw "Portable Compose должен обращаться к Temporal по имени сервиса."
@@ -107,6 +123,12 @@ if ($startScript -notmatch 'run --rm postgres-bootstrap') {
 $postgresBootstrap = Get-Content -Raw -LiteralPath "compose/postgres/bootstrap.sh"
 if ($postgresBootstrap -notmatch 'exec /bin/sh /scripts/init/01-users\.sh') {
     throw "PostgreSQL init должен запускаться через shell и не зависеть от executable bit."
+}
+$postgresInit = Get-Content -Raw -LiteralPath "compose/postgres/init/01-users.sh"
+if ($postgresInit -notmatch 'CONVERSATION_DB_USER' `
+    -or $postgresInit -notmatch 'CONVERSATION_DB_PASSWORD' `
+    -or $postgresInit -notmatch 'CREATE DATABASE conversations') {
+    throw "PostgreSQL bootstrap не создаёт отдельную БД Conversation Service."
 }
 if ($startScript -notmatch 'scripts/check-keycloak.ps1') {
     throw "После запуска нужна runtime-проверка Keycloak fixture."
@@ -159,7 +181,7 @@ foreach ($action in @("Status", "Stop", "Restart", "Logs")) {
     }
 }
 $appsOverride = Get-Content -Raw -LiteralPath "compose/apps.local.yaml"
-foreach ($image in @("portable-agent/channel-gateway:local", "portable-agent/agent-runtime:local", "portable-agent/action-service:local", "portable-agent/mcp-gateway:local", "portable-agent/calendar-mcp:local")) {
+foreach ($image in @("portable-agent/channel-gateway:local", "portable-agent/agent-runtime:local", "portable-agent/action-service:local", "portable-agent/conversation-service:local", "portable-agent/mcp-gateway:local", "portable-agent/calendar-mcp:local")) {
     if ($appsOverride -notmatch [regex]::Escape($image)) {
         throw "Local override не задаёт отдельный image tag $image."
     }
@@ -169,6 +191,7 @@ if ($keycloakCheck -notmatch 'portable-agent-realm.json' `
     -or $keycloakCheck -notmatch 'tenant_id' `
     -or $keycloakCheck -notmatch 'channel-gateway' `
     -or $keycloakCheck -notmatch 'agent-runtime' `
+    -or $keycloakCheck -notmatch 'conversation-service' `
     -or $keycloakCheck -notmatch 'calendar-mcp' `
     -or $keycloakCheck -notmatch 'calendar:write') {
     throw "Runtime-проверка Keycloak должна сверять JWT с realm fixture."
@@ -204,7 +227,7 @@ if (-not (Test-Path -LiteralPath $appWorkflowPath)) {
     throw "Нет CI-проверки полного Compose-среза."
 }
 $appWorkflow = Get-Content -Raw -LiteralPath $appWorkflowPath
-foreach ($required in @("versions.env", "channel-gateway", "agent-runtime", "repository: portable-agent/test-lab", 'ref: ${{ steps.versions.outputs.test_lab }}', "start-local.ps1 -Apps", "run-test-lab.ps1", "stop-local.ps1 -DeleteData", "if: always()")) {
+foreach ($required in @("versions.env", "channel-gateway", "agent-runtime", "CONVERSATION_SERVICE_CONTEXT", "repository: portable-agent/conversation-service", 'ref: ${{ steps.versions.outputs.conversation }}', "repository: portable-agent/test-lab", 'ref: ${{ steps.versions.outputs.test_lab }}', "start-local.ps1 -Apps", "run-test-lab.ps1", "stop-local.ps1 -DeleteData", "if: always()")) {
     if ($appWorkflow -notmatch [regex]::Escape($required)) {
         throw "CI-проверка полного среза не содержит $required."
     }

@@ -29,6 +29,7 @@ try {
         -or $audiences -notcontains "channel-gateway" `
         -or $audiences -notcontains "agent-runtime" `
         -or $audiences -notcontains "action-service" `
+        -or $audiences -notcontains "conversation-service" `
         -or $audiences -notcontains "calendar-mcp" -or $scopes -notcontains "calendar:write") {
         throw "JWT claims пользователя не содержат tenant и audience сервисов."
     }

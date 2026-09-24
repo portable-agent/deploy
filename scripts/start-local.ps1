@@ -1,7 +1,7 @@
 ﻿param(
     [switch]$Observe,
     [switch]$Apps,
-    [ValidateSet("channel-gateway", "agent-runtime", "action-service", "mcp-gateway", "calendar-mcp")]
+    [ValidateSet("channel-gateway", "agent-runtime", "action-service", "conversation-service", "mcp-gateway", "calendar-mcp")]
     [string]$Service
 )
 $ErrorActionPreference = "Stop"

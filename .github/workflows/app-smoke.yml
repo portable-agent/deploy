@@ -29,6 +29,7 @@ jobs:
       CHANNEL_GATEWAY_CONTEXT: ${{ github.workspace }}/repos/channel-gateway
       AGENT_RUNTIME_CONTEXT: ${{ github.workspace }}/repos/agent-runtime
       ACTION_SERVICE_CONTEXT: ${{ github.workspace }}/repos/action-service
+      CONVERSATION_SERVICE_CONTEXT: ${{ github.workspace }}/repos/conversation-service
       MCP_GATEWAY_CONTEXT: ${{ github.workspace }}/repos/mcp-gateway
       CALENDAR_MCP_CONTEXT: ${{ github.workspace }}/repos/calendar-mcp
       TEST_LAB_PATH: ${{ github.workspace }}/repos/test-lab
@@ -44,6 +45,7 @@ jobs:
           "channel=$($versions.CHANNEL_GATEWAY_IMAGE.Split(':')[-1])" >> $env:GITHUB_OUTPUT
           "agent=$($versions.AGENT_RUNTIME_IMAGE.Split(':')[-1])" >> $env:GITHUB_OUTPUT
           "action=$($versions.ACTION_SERVICE_IMAGE.Split(':')[-1])" >> $env:GITHUB_OUTPUT
+          "conversation=$($versions.CONVERSATION_SERVICE_IMAGE.Split(':')[-1])" >> $env:GITHUB_OUTPUT
           "gateway=$($versions.MCP_GATEWAY_IMAGE.Split(':')[-1])" >> $env:GITHUB_OUTPUT
           "calendar=$($versions.CALENDAR_MCP_IMAGE.Split(':')[-1])" >> $env:GITHUB_OUTPUT
           "test_lab=$($versions.TEST_LAB_REF)" >> $env:GITHUB_OUTPUT
@@ -68,6 +70,13 @@ jobs:
           repository: portable-agent/action-service
           ref: ${{ steps.versions.outputs.action }}
           path: repos/action-service
+
+      - name: Получить Conversation Service
+        uses: actions/checkout@v7
+        with:
+          repository: portable-agent/conversation-service
+          ref: ${{ steps.versions.outputs.conversation }}
+          path: repos/conversation-service
 
       - name: Получить MCP Gateway
         uses: actions/checkout@v7

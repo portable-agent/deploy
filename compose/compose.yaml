@@ -14,6 +14,8 @@ services:
       TEMPORAL_DB_PASSWORD: ${TEMPORAL_DB_PASSWORD:?set TEMPORAL_DB_PASSWORD}
       ACTION_DB_USER: ${ACTION_DB_USER:?set ACTION_DB_USER}
       ACTION_DB_PASSWORD: ${ACTION_DB_PASSWORD:?set ACTION_DB_PASSWORD}
+      CONVERSATION_DB_USER: ${CONVERSATION_DB_USER:?set CONVERSATION_DB_USER}
+      CONVERSATION_DB_PASSWORD: ${CONVERSATION_DB_PASSWORD:?set CONVERSATION_DB_PASSWORD}
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
@@ -105,6 +107,8 @@ services:
       TEMPORAL_DB_PASSWORD: ${TEMPORAL_DB_PASSWORD:?set TEMPORAL_DB_PASSWORD}
       ACTION_DB_USER: ${ACTION_DB_USER:?set ACTION_DB_USER}
       ACTION_DB_PASSWORD: ${ACTION_DB_PASSWORD:?set ACTION_DB_PASSWORD}
+      CONVERSATION_DB_USER: ${CONVERSATION_DB_USER:?set CONVERSATION_DB_USER}
+      CONVERSATION_DB_PASSWORD: ${CONVERSATION_DB_PASSWORD:?set CONVERSATION_DB_PASSWORD}
     volumes:
       - ./postgres:/scripts:ro
     depends_on:
@@ -206,6 +210,10 @@ services:
       AGENT_URL: http://agent-runtime:8080
       AGENT_TIMEOUT_MS: 5000
       AGENT_AVAILABLE_CONNECTORS: '["fake-calendar"]'
+      CONVERSATION_URL: http://conversation-service:8080
+      CONVERSATION_TIMEOUT_MS: 10000
+      ACTION_URL: http://action-service:8080
+      ACTION_TIMEOUT_MS: 10000
       OIDC_ISSUER_URL: http://localhost:${KEYCLOAK_PORT:-8081}/realms/portable-agent
       OIDC_JWKS_URL: http://keycloak:8080/realms/portable-agent/protocol/openid-connect/certs
       OIDC_AUDIENCE: channel-gateway
@@ -213,6 +221,10 @@ services:
       keycloak:
         condition: service_healthy
       agent-runtime:
+        condition: service_healthy
+      conversation-service:
+        condition: service_healthy
+      action-service:
         condition: service_healthy
     ports:
       - "127.0.0.1:${CHANNEL_GATEWAY_PORT:-18084}:8080"
@@ -339,6 +351,43 @@ services:
         [
           CMD-SHELL,
           "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080 && printf \"GET /actuator/health/readiness HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3 && grep -q \"HTTP/1.1 200 \" <&3'",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 20s
+    networks: [platform]
+
+  conversation-service:
+    profiles: [apps]
+    image: ${CONVERSATION_SERVICE_IMAGE:?set CONVERSATION_SERVICE_IMAGE}
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/conversations
+      DB_USER: ${CONVERSATION_DB_USER:?set CONVERSATION_DB_USER}
+      DB_PASSWORD: ${CONVERSATION_DB_PASSWORD:?set CONVERSATION_DB_PASSWORD}
+      OIDC_ISSUER: http://localhost:${KEYCLOAK_PORT:-8081}/realms/portable-agent
+      OIDC_JWKS_URL: http://keycloak:8080/realms/portable-agent/protocol/openid-connect/certs
+      OIDC_AUDIENCE: conversation-service
+      AGENT_URL: http://agent-runtime:8080
+      ACTION_URL: http://action-service:8080
+      REMOTE_CONNECT_TIMEOUT: PT2S
+      REMOTE_READ_TIMEOUT: PT10S
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      agent-runtime:
+        condition: service_healthy
+      action-service:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${CONVERSATION_SERVICE_PORT:-18085}:8080"
+    healthcheck:
+      test:
+        [
+          CMD-SHELL,
+          "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080 && printf \"GET /actuator/health HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3 && grep -q \"HTTP/1.1 200 \" <&3'",
         ]
       interval: 5s
       timeout: 3s
