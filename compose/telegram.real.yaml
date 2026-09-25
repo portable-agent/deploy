@@ -1,0 +1,6 @@
+services:
+  telegram-adapter:
+    environment:
+      TELEGRAM_API_URL: https://api.telegram.org
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_REAL_BOT_TOKEN:?set TELEGRAM_REAL_BOT_TOKEN}
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_REAL_WEBHOOK_SECRET:?set TELEGRAM_REAL_WEBHOOK_SECRET}

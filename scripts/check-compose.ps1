@@ -254,6 +254,9 @@ foreach ($required in @("TEST_LAB_PATH", "portable-agent-realm.json", "CALENDAR_
     }
 }
 $versions = Get-Content -Raw -LiteralPath "config/versions.env"
+if ($versions -notmatch '(?m)^CLOUDFLARED_IMAGE=cloudflare/cloudflared@sha256:[0-9a-f]{64}\r?$') {
+    throw "Cloudflared image должен быть закреплён digest."
+}
 if ($versions -notmatch '(?m)^AGENT_RUNTIME_IMAGE=ghcr\.io/portable-agent/agent-runtime:[0-9a-f]{40}\r?$') {
     throw "Agent Runtime image должен быть закреплён полным Git SHA."
 }
@@ -265,6 +268,32 @@ if ($versions -notmatch '(?m)^TELEGRAM_ADAPTER_IMAGE=ghcr\.io/portable-agent/tel
 }
 if ($versions -notmatch '(?m)^TEST_LAB_REF=[0-9a-f]{40}\r?$') {
     throw "Test Lab должен быть закреплён полным Git SHA."
+}
+$realTelegramPath = "compose/telegram.real.yaml"
+if (-not (Test-Path -LiteralPath $realTelegramPath)) {
+    throw "Нет отдельного Compose override для настоящего Telegram."
+}
+$realTelegram = Get-Content -Raw -LiteralPath $realTelegramPath
+foreach ($required in @("TELEGRAM_REAL_BOT_TOKEN", "TELEGRAM_REAL_WEBHOOK_SECRET", "https://api.telegram.org")) {
+    if ($realTelegram -notmatch [regex]::Escape($required)) {
+        throw "Real Telegram override не содержит $required."
+    }
+}
+$realTelegramScript = Get-Content -Raw -LiteralPath "scripts/start-telegram-real.ps1"
+foreach ($required in @("getMe", "setWebhook", "getWebhookInfo", "trycloudflare", "allowed_updates", "callback_query")) {
+    if ($realTelegramScript -notmatch [regex]::Escape($required)) {
+        throw "Запуск настоящего Telegram не содержит $required."
+    }
+}
+$stopTelegramScript = Get-Content -Raw -LiteralPath "scripts/stop-telegram-real.ps1"
+if ($stopTelegramScript -notmatch 'deleteWebhook') {
+    throw "Остановка настоящего Telegram должна удалить временный webhook."
+}
+$taskfile = Get-Content -Raw -LiteralPath "Taskfile.yml"
+foreach ($taskName in @("telegram:real:up", "telegram:real:down")) {
+    if ($taskfile -notmatch "(?m)^  $([regex]::Escape($taskName)):") {
+        throw "В Taskfile нет команды $taskName."
+    }
 }
 $appWorkflowPath = ".github/workflows/app-smoke.yml"
 if (-not (Test-Path -LiteralPath $appWorkflowPath)) {

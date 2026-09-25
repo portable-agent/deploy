@@ -70,6 +70,16 @@ tasks:
     cmds:
       - '{{.POWERSHELL}} {{.POWERSHELL_ARGS}} -File ./scripts/service-local.ps1 -Action Logs -Service "{{.SERVICE}}" -Tail {{.TAIL}}'
 
+  telegram:real:up:
+    desc: Подключить локальный Telegram Adapter к настоящему боту через временный HTTPS tunnel
+    cmds:
+      - '{{.POWERSHELL}} {{.POWERSHELL_ARGS}} -File ./scripts/start-telegram-real.ps1'
+
+  telegram:real:down:
+    desc: Удалить временный webhook и вернуть Telegram Adapter к fake API
+    cmds:
+      - '{{.POWERSHELL}} {{.POWERSHELL_ARGS}} -File ./scripts/stop-telegram-real.ps1'
+
   status:
     desc: Показать состояние локального окружения
     cmds:

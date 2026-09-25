@@ -80,6 +80,32 @@ Compose project и всегда удаляет только созданные �
 Если в `.env` оставлен placeholder `derive-from-local-webhook-secret`, команда запуска получает
 стабильный локальный encryption key из webhook secret только в памяти процесса. Для любого общего
 окружения `TELEGRAM_TOKEN_KEY_BASE64` должен приходить отдельным случайным секретом.
+
+### Настоящий Telegram локально
+
+Создай тестового бота через BotFather и добавь только в локальный `.env`:
+
+```dotenv
+TELEGRAM_REAL_BOT_TOKEN=<token BotFather>
+TELEGRAM_REAL_WEBHOOK_SECRET=<случайная строка длиной от 32 символов>
+```
+
+Подключить настоящий Bot API через временный HTTPS URL:
+
+```powershell
+task telegram:real:up
+```
+
+После проверки обязательно удали временный webhook и верни локальный fake API:
+
+```powershell
+task telegram:real:down
+```
+
+Quick Tunnel предназначен только для ручной локальной проверки. Команда не печатает bot token и
+не сохраняет его в Compose-файлах. После живого прогона в тесты переносятся только обезличенные формы
+Telegram Update и Bot API response.
+
 `TEST_LAB_PATH` по умолчанию указывает на соседний `../portable-agent-test-lab`; путь можно
 переопределить в `.env`. Channel Gateway доступен на `http://localhost:18084`, Agent Runtime — на
 `http://localhost:18080`, Action API — на
