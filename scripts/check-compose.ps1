@@ -89,6 +89,9 @@ $localUser = $realm.users | Where-Object username -eq "local-user"
 if (-not $localUser.email -or -not $localUser.emailVerified) {
     throw "Профиль local-user не готов для входа."
 }
+if (@($localUser.realmRoles) -notcontains "offline_access") {
+    throw "Профиль local-user не может получить offline refresh token для Device Flow."
+}
 $composeText = Get-Content -Raw -LiteralPath "compose/compose.yaml"
 if ($composeText -notmatch '(?ms)^  keycloak:.*?^    healthcheck:') {
     throw "У Keycloak нет readiness healthcheck."

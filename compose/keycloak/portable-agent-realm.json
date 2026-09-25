@@ -315,6 +315,7 @@
       "attributes": {
         "tenant_id": ["${ACTION_SERVICE_TENANT_ID}"]
       },
+      "realmRoles": ["offline_access"],
       "requiredActions": [],
       "credentials": [
         {
