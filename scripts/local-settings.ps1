@@ -5,7 +5,7 @@ function Get-LocalSetting([string]$Name) {
         $line = Get-Content -LiteralPath $path | Where-Object { $_ -match "^$([regex]::Escape($Name))=" } | Select-Object -Last 1
         if ($line) { $value = $line.Substring($line.IndexOf('=') + 1) }
     }
-    if (-not $value) { throw "Не задан $Name." }
+    if (-not $value) { throw "Set $Name in the environment or local .env file." }
     return $value
 }
 

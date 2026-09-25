@@ -448,6 +448,15 @@ services:
       retries: 30
     networks: [platform]
 
+  cloudflared:
+    profiles: [telegram-real]
+    image: ${CLOUDFLARED_IMAGE:?set CLOUDFLARED_IMAGE}
+    command: [tunnel, --no-autoupdate, --url, http://telegram-adapter:8080]
+    depends_on:
+      telegram-adapter:
+        condition: service_healthy
+    networks: [platform]
+
   tempo:
     profiles: [observe]
     image: ${TEMPO_IMAGE:?set TEMPO_IMAGE}

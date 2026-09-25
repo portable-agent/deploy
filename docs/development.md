@@ -36,6 +36,12 @@ task service:up SERVICE=telegram-adapter
 Она поднимет PostgreSQL, Keycloak, Channel Gateway и локальный fake Telegram API. Настоящий Telegram
 bot token для разработки и CI не требуется.
 
+Когда нужно проверить настоящий Telegram, добавь `TELEGRAM_REAL_BOT_TOKEN` и
+`TELEGRAM_REAL_WEBHOOK_SECRET` в игнорируемый `.env`, затем выполни `task telegram:real:up`.
+Команда поднимет временный HTTPS tunnel, проверит bot token и зарегистрирует защищённый webhook.
+После ручного сценария выполни `task telegram:real:down`: внешний webhook будет удалён до возврата
+адаптера к fake API.
+
 `task test:e2e` поднимает полный локальный срез и ждёт healthchecks. Затем `deploy` вызывает
 `task test:e2e` в соседнем репозитории `test-lab`, который владеет black-box сценарием от текста до
 сохранённого события. Если репозитории лежат не рядом, задай `TEST_LAB_PATH` в локальном `.env`.
