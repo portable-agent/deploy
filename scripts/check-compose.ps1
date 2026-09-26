@@ -175,6 +175,10 @@ if ($startScript -notmatch 'scripts/check-keycloak.ps1') {
 if ($startScript -notmatch '\[switch\]\$Apps' -or $startScript -notmatch '"apps"') {
     throw "start-local должен уметь запускать приложения через -Apps."
 }
+if ($startScript -notmatch '\[switch\]\$Model' `
+    -or $startScript -notmatch 'compose/model.local.yaml') {
+    throw "start-local должен уметь включать локальную AI-модель через -Model."
+}
 if ($startScript -notmatch 'compose/apps.local.yaml' -or $startScript -notmatch 'up -d --build --wait') {
     throw "Локальные приложения должны собираться из соседних репозиториев."
 }
@@ -198,6 +202,7 @@ foreach ($taskName in @(
     "doctor",
     "status",
     "test:e2e",
+    "test:model",
     "down",
     "reset"
 )) {
@@ -251,7 +256,7 @@ $testLabRunner = Get-Content -Raw -LiteralPath $testLabRunnerPath
 if ($testLabRunner -notmatch '\$containerIds\s*=\s*@\(\s*\r?\n\s*\(& docker ps') {
     throw "Результат docker ps должен сохраняться массивом до обращения по индексу."
 }
-foreach ($required in @("TEST_LAB_PATH", "portable-agent-realm.json", "CALENDAR_TEST_API_KEY", "DOCKER_NETWORK", "docker inspect", "com.docker.compose.service=channel-gateway", "http://channel-gateway:8080", "http://action-service:8080", "http://calendar-mcp:8080", "task", "test:e2e")) {
+foreach ($required in @("TEST_LAB_PATH", "portable-agent-realm.json", "CALENDAR_TEST_API_KEY", "DOCKER_NETWORK", "docker inspect", "com.docker.compose.service=channel-gateway", "http://channel-gateway:8080", "http://action-service:8080", "http://calendar-mcp:8080", "task", "test:e2e", "test:model", "TaskName")) {
     if ($testLabRunner -notmatch [regex]::Escape($required)) {
         throw "Адаптер test-lab не содержит $required."
     }
@@ -288,14 +293,44 @@ foreach ($required in @("getMe", "setWebhook", "getWebhookInfo", "trycloudflare"
         throw "Запуск настоящего Telegram не содержит $required."
     }
 }
+if ($realTelegramScript -notmatch '\[switch\]\$Model' `
+    -or $realTelegramScript -notmatch 'compose/model.local.yaml') {
+    throw "Настоящий Telegram должен поддерживать тот же локальный AI-профиль."
+}
+if ($realTelegramScript -match 'up -d --build --wait --force-recreate telegram-adapter cloudflared' `
+    -or $realTelegramScript -notmatch 'up -d --no-deps --no-build --wait --force-recreate telegram-adapter cloudflared') {
+    throw "Повторный запуск Telegram не должен пересобирать уже поднятые приложения."
+}
 $stopTelegramScript = Get-Content -Raw -LiteralPath "scripts/stop-telegram-real.ps1"
 if ($stopTelegramScript -notmatch 'deleteWebhook') {
     throw "Остановка настоящего Telegram должна удалить временный webhook."
 }
 $taskfile = Get-Content -Raw -LiteralPath "Taskfile.yml"
-foreach ($taskName in @("telegram:real:up", "telegram:real:down")) {
+foreach ($taskName in @("services:model:up", "telegram:real:up", "telegram:real:model:up", "telegram:real:down")) {
     if ($taskfile -notmatch "(?m)^  $([regex]::Escape($taskName)):") {
         throw "В Taskfile нет команды $taskName."
+    }
+}
+$modelOverridePath = "compose/model.local.yaml"
+if (-not (Test-Path -LiteralPath $modelOverridePath)) {
+    throw "Нет Compose override для локальной AI-модели."
+}
+$modelOverride = Get-Content -Raw -LiteralPath $modelOverridePath
+foreach ($required in @(
+    "AGENT_MODEL_PROVIDER",
+    "openai-compatible",
+    "AGENT_MODEL_BASE_URL",
+    "host.docker.internal:11434/v1",
+    "AGENT_MODEL_NAME",
+    "qwen2.5:7b",
+    "AGENT_MODEL_TIMEOUT_SECONDS",
+    "AGENT_TIMEOUT_MS",
+    "CONVERSATION_TIMEOUT_MS",
+    "REMOTE_READ_TIMEOUT",
+    "host.docker.internal:host-gateway"
+)) {
+    if ($modelOverride -notmatch [regex]::Escape($required)) {
+        throw "Local model override не содержит $required."
     }
 }
 $appWorkflowPath = ".github/workflows/app-smoke.yml"
@@ -314,5 +349,8 @@ if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
 & docker compose --env-file .env.example --env-file config/versions.env -f compose/compose.yaml `
     -f compose/apps.local.yaml --profile core --profile observe --profile apps config --quiet
 if ($LASTEXITCODE -ne 0) { throw "Compose config содержит ошибку." }
+& docker compose --env-file .env.example --env-file config/versions.env -f compose/compose.yaml `
+    -f compose/apps.local.yaml -f compose/model.local.yaml --profile core --profile apps config --quiet
+if ($LASTEXITCODE -ne 0) { throw "Compose config локальной AI-модели содержит ошибку." }
 Write-Host "Compose config прошёл проверку."
 

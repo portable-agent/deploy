@@ -1,3 +1,6 @@
+param(
+    [switch]$Model
+)
 $ErrorActionPreference = "Stop"
 . "$PSScriptRoot/local-settings.ps1"
 
@@ -14,7 +17,7 @@ $env:TELEGRAM_REAL_BOT_TOKEN = $token
 $env:TELEGRAM_REAL_WEBHOOK_SECRET = $webhookSecret
 Initialize-LocalTelegramKey
 
-& "$PSScriptRoot/start-local.ps1" -Apps
+& "$PSScriptRoot/start-local.ps1" -Apps -Model:$Model
 if ($LASTEXITCODE -ne 0) { throw "The local stack did not start." }
 
 $envFiles = @("--env-file", ".env.example", "--env-file", "config/versions.env")
@@ -23,9 +26,10 @@ $composeFiles = @("-f", "compose/compose.yaml")
 $runningOnWindows = $PSVersionTable.PSEdition -eq "Desktop" -or $IsWindows
 if ($runningOnWindows) { $composeFiles += @("-f", "compose/windows.local.yaml") }
 $composeFiles += @("-f", "compose/apps.local.yaml", "-f", "compose/telegram.real.yaml")
+if ($Model) { $composeFiles += @("-f", "compose/model.local.yaml") }
 
 & docker compose @envFiles @composeFiles --profile core --profile apps --profile telegram-real `
-    up -d --build --wait --force-recreate telegram-adapter cloudflared
+    up -d --no-deps --no-build --wait --force-recreate telegram-adapter cloudflared
 if ($LASTEXITCODE -ne 0) { throw "Real Telegram mode did not start." }
 
 $tunnelUrl = $null
