@@ -1,0 +1,18 @@
+services:
+  channel-gateway:
+    environment:
+      AGENT_TIMEOUT_MS: ${AGENT_GATEWAY_TIMEOUT_MS:-130000}
+      CONVERSATION_TIMEOUT_MS: ${AGENT_CONVERSATION_TIMEOUT_MS:-140000}
+
+  conversation-service:
+    environment:
+      REMOTE_READ_TIMEOUT: ${AGENT_REMOTE_READ_TIMEOUT:-PT130S}
+
+  agent-runtime:
+    environment:
+      AGENT_MODEL_PROVIDER: openai-compatible
+      AGENT_MODEL_BASE_URL: ${AGENT_MODEL_BASE_URL:-http://host.docker.internal:11434/v1}
+      AGENT_MODEL_NAME: ${AGENT_MODEL_NAME:-qwen2.5:7b}
+      AGENT_MODEL_TIMEOUT_SECONDS: ${AGENT_MODEL_TIMEOUT_SECONDS:-120}
+    extra_hosts:
+      - host.docker.internal:host-gateway

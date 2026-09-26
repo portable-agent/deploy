@@ -15,6 +15,13 @@ Taskfile — единая точка входа. Внутренние PowerShell
 4. Посмотри состояние через `task status`, логи — через `task service:logs SERVICE=<name>`.
 5. Перед pull request выполни `task test:e2e`.
 
+Обычные команды используют demo-модель, поэтому тесты не зависят от GPU и внешних API. Когда нужна
+ручная проверка фраз вида «Поставь завтра в 19:00 созвон на полчаса», запусти Ollama на хосте и
+выполни `task services:model:up`. Compose подключит только override `compose/model.local.yaml`.
+Настройки модели и увеличенные тайм-ауты действуют лишь в этом режиме.
+Команда `task test:model` сама поднимает этот профиль и запускает отдельный opt-in сценарий из
+`test-lab`; быстрый `task test:e2e` по-прежнему использует детерминированную demo-модель.
+
 Допустимые имена: `channel-gateway`, `conversation-service`, `agent-runtime`, `action-service`,
 `mcp-gateway`, `calendar-mcp` и `telegram-adapter`. Неизвестное имя отклоняется до вызова Docker.
 
@@ -41,6 +48,9 @@ bot token для разработки и CI не требуется.
 Команда поднимет временный HTTPS tunnel, проверит bot token и зарегистрирует защищённый webhook.
 После ручного сценария выполни `task telegram:real:down`: внешний webhook будет удалён до возврата
 адаптера к fake API.
+
+Команда `task telegram:real:model:up` объединяет настоящий Telegram и локальную Ollama. Она не
+публикует Ollama наружу: временный tunnel по-прежнему ведёт только к Telegram Adapter.
 
 `task test:e2e` поднимает полный локальный срез и ждёт healthchecks. Затем `deploy` вызывает
 `task test:e2e` в соседнем репозитории `test-lab`, который владеет black-box сценарием от текста до

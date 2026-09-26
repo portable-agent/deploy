@@ -40,6 +40,11 @@ tasks:
     cmds:
       - '{{.POWERSHELL}} {{.POWERSHELL_ARGS}} -File ./scripts/start-local.ps1 -Apps'
 
+  services:model:up:
+    desc: Собрать сервисы и включить локальную OpenAI-совместимую модель
+    cmds:
+      - '{{.POWERSHELL}} {{.POWERSHELL_ARGS}} -File ./scripts/start-local.ps1 -Apps -Model'
+
   service:up:
     desc: Собрать выбранный сервис и поднять его обязательные зависимости
     requires:
@@ -75,6 +80,11 @@ tasks:
     cmds:
       - '{{.POWERSHELL}} {{.POWERSHELL_ARGS}} -File ./scripts/start-telegram-real.ps1'
 
+  telegram:real:model:up:
+    desc: Подключить настоящего Telegram-бота и локальную AI-модель
+    cmds:
+      - '{{.POWERSHELL}} {{.POWERSHELL_ARGS}} -File ./scripts/start-telegram-real.ps1 -Model'
+
   telegram:real:down:
     desc: Удалить временный webhook и вернуть Telegram Adapter к fake API
     cmds:
@@ -90,6 +100,12 @@ tasks:
     cmds:
       - task: services:up
       - '{{.POWERSHELL}} {{.POWERSHELL_ARGS}} -File ./scripts/run-test-lab.ps1'
+
+  test:model:
+    desc: Поднять AI-профиль и проверить понимание естественной фразы
+    cmds:
+      - task: services:model:up
+      - '{{.POWERSHELL}} {{.POWERSHELL_ARGS}} -File ./scripts/run-test-lab.ps1 -TaskName test:model'
 
   verify:
     desc: Выполнить локальные проверки конфигурации и документации

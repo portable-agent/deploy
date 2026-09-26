@@ -1,17 +1,23 @@
 ﻿param(
     [switch]$Observe,
     [switch]$Apps,
+    [switch]$Model,
     [ValidateSet("channel-gateway", "agent-runtime", "action-service", "conversation-service", "mcp-gateway", "calendar-mcp", "telegram-adapter")]
     [string]$Service
 )
 $ErrorActionPreference = "Stop"
 if ($Apps -and $Service) { throw "Используй -Apps или -Service, но не оба параметра одновременно." }
+if ($Model -and -not ($Apps -or $Service)) {
+    throw "Используй -Model вместе с -Apps или -Service."
+}
 . "$PSScriptRoot/local-settings.ps1"
 $envFiles = @("--env-file", ".env.example", "--env-file", "config/versions.env")
 if (Test-Path .env) { $envFiles += @("--env-file", ".env") }
 $composeFiles = @("-f", "compose/compose.yaml")
 $runningOnWindows = $PSVersionTable.PSEdition -eq "Desktop" -or $IsWindows
 if ($runningOnWindows) { $composeFiles += @("-f", "compose/windows.local.yaml") }
+$appComposeFiles = @($composeFiles + @("-f", "compose/apps.local.yaml"))
+if ($Model) { $appComposeFiles += @("-f", "compose/model.local.yaml") }
 Initialize-LocalTelegramKey
 $coreProfiles = @("--profile", "core")
 if ($Observe) { $coreProfiles += @("--profile", "observe") }
@@ -38,12 +44,12 @@ if ($tenantId -notmatch '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89a
 if ($LASTEXITCODE -ne 0) { throw "Локальный Keycloak не прошёл runtime-проверку." }
 if ($Apps) {
     $appProfiles = @($coreProfiles + @("--profile", "apps"))
-    & docker compose @envFiles @composeFiles -f compose/apps.local.yaml `
+    & docker compose @envFiles @appComposeFiles `
         @appProfiles up -d --build --wait --scale temporal-namespace=0
     if ($LASTEXITCODE -ne 0) { throw "Приложения локального среза не запустились." }
 } elseif ($Service) {
     $appProfiles = @($coreProfiles + @("--profile", "apps"))
-    & docker compose @envFiles @composeFiles -f compose/apps.local.yaml `
+    & docker compose @envFiles @appComposeFiles `
         @appProfiles up -d --build --wait $Service
     if ($LASTEXITCODE -ne 0) { throw "Сервис $Service и его зависимости не запустились." }
 }

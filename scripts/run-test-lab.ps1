@@ -1,4 +1,8 @@
-param([string]$TestLabPath = "")
+param(
+    [string]$TestLabPath = "",
+    [ValidateSet("test:e2e", "test:model")]
+    [string]$TaskName = "test:e2e"
+)
 
 $ErrorActionPreference = "Stop"
 
@@ -72,7 +76,7 @@ try {
         $oldSettings[$name] = [Environment]::GetEnvironmentVariable($name, "Process")
         [Environment]::SetEnvironmentVariable($name, $settings[$name], "Process")
     }
-    & $taskCommand.Source --dir $resolvedTestLabPath test:e2e
+    & $taskCommand.Source --dir $resolvedTestLabPath $TaskName
     if ($LASTEXITCODE -ne 0) { throw "Test Lab acceptance scenario failed." }
 }
 finally {
