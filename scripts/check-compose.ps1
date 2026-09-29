@@ -22,6 +22,10 @@ $calendarClient = $realm.clients | Where-Object clientId -eq "calendar-mcp"
 if (-not $calendarClient -or -not $calendarClient.bearerOnly) {
     throw "Нет resource server client calendar-mcp."
 }
+$connectionClient = $realm.clients | Where-Object clientId -eq "connection-service"
+if (-not $connectionClient -or -not $connectionClient.bearerOnly) {
+    throw "Нет resource server client connection-service."
+}
 $agentClient = $realm.clients | Where-Object clientId -eq "agent-runtime"
 if (-not $agentClient -or -not $agentClient.bearerOnly) {
     throw "Нет resource server client agent-runtime."
@@ -63,6 +67,10 @@ $calendarScope = $realm.clientScopes | Where-Object name -eq "calendar:write"
 if (-not $calendarScope -or $localClient.defaultClientScopes -notcontains "calendar:write") {
     throw "Локальный JWT не получает scope calendar:write."
 }
+$connectionScope = $realm.clientScopes | Where-Object name -eq "connection:token"
+if (-not $connectionScope -or $actionClient.defaultClientScopes -notcontains "connection:token") {
+    throw "Service token action-service не получает scope connection:token."
+}
 $gatewayScope = $realm.clientScopes | Where-Object name -eq "mcp:call"
 if (-not $gatewayScope -or $actionClient.defaultClientScopes -notcontains "mcp:call" `
     -or $actionClient.defaultClientScopes -notcontains "calendar:write") {
@@ -72,7 +80,8 @@ $localAudiences = @($localClient.protocolMappers | ForEach-Object { $_.config.'i
 if ($localAudiences -notcontains "channel-gateway" -or $localAudiences -notcontains "agent-runtime" `
     -or $localAudiences -notcontains "action-service" `
     -or $localAudiences -notcontains "conversation-service" `
-    -or $localAudiences -notcontains "calendar-mcp") {
+    -or $localAudiences -notcontains "calendar-mcp" `
+    -or $localAudiences -notcontains "connection-service") {
     throw "Локальный JWT не получает audience всех пользовательских сервисов."
 }
 $tenantMapper = $localClient.protocolMappers | Where-Object { $_.config.'claim.name' -eq "tenant_id" }
@@ -82,8 +91,9 @@ if (-not $tenantMapper) {
 $actionTenantMapper = $actionClient.protocolMappers | Where-Object { $_.config.'claim.name' -eq "tenant_id" }
 $actionAudiences = @($actionClient.protocolMappers | ForEach-Object { $_.config.'included.client.audience' })
 if (-not $actionTenantMapper -or $actionAudiences -notcontains "mcp-gateway" `
-    -or $actionAudiences -notcontains "calendar-mcp") {
-    throw "Service token action-service не содержит tenant_id и обе audience."
+    -or $actionAudiences -notcontains "calendar-mcp" `
+    -or $actionAudiences -notcontains "connection-service") {
+    throw "Service token action-service не содержит tenant_id и нужные audience."
 }
 $localUser = $realm.users | Where-Object username -eq "local-user"
 if (-not $localUser.email -or -not $localUser.emailVerified) {
@@ -96,10 +106,15 @@ $composeText = Get-Content -Raw -LiteralPath "compose/compose.yaml"
 if ($composeText -notmatch '(?ms)^  keycloak:.*?^    healthcheck:') {
     throw "У Keycloak нет readiness healthcheck."
 }
-foreach ($service in @("channel-gateway", "agent-runtime", "action-service", "conversation-service", "mcp-gateway", "calendar-mcp")) {
+foreach ($service in @("channel-gateway", "agent-runtime", "action-service", "conversation-service", "mcp-gateway", "calendar-mcp", "google-calendar-mcp", "connection-service")) {
     if ($composeText -notmatch "(?m)^  $([regex]::Escape($service)):") {
         throw "В Compose нет приложения $service."
     }
+}
+if ($composeText -notmatch '(?ms)^  connection-service:.*?DATABASE_URL: jdbc:postgresql://postgres:5432/connections' `
+    -or $composeText -notmatch '(?ms)^  google-calendar-mcp:.*?CALENDAR_PROVIDER: google-calendar' `
+    -or $composeText -notmatch '"name":"google-calendar"') {
+    throw "Compose не содержит путь Google Calendar через Connection Service."
 }
 foreach ($service in @("telegram-adapter", "fake-telegram")) {
     if ($composeText -notmatch "(?m)^  $([regex]::Escape($service)):") {
@@ -230,7 +245,7 @@ foreach ($action in @("Status", "Stop", "Restart", "Logs")) {
     }
 }
 $appsOverride = Get-Content -Raw -LiteralPath "compose/apps.local.yaml"
-foreach ($image in @("portable-agent/channel-gateway:local", "portable-agent/agent-runtime:local", "portable-agent/action-service:local", "portable-agent/conversation-service:local", "portable-agent/mcp-gateway:local", "portable-agent/calendar-mcp:local", "portable-agent/telegram-adapter:local")) {
+foreach ($image in @("portable-agent/channel-gateway:local", "portable-agent/agent-runtime:local", "portable-agent/action-service:local", "portable-agent/conversation-service:local", "portable-agent/mcp-gateway:local", "portable-agent/calendar-mcp:local", "portable-agent/connection-service:local", "portable-agent/telegram-adapter:local")) {
     if ($appsOverride -notmatch [regex]::Escape($image)) {
         throw "Local override не задаёт отдельный image tag $image."
     }
@@ -273,6 +288,9 @@ if ($versions -notmatch '(?m)^CHANNEL_GATEWAY_IMAGE=ghcr\.io/portable-agent/chan
 }
 if ($versions -notmatch '(?m)^TELEGRAM_ADAPTER_IMAGE=ghcr\.io/portable-agent/telegram-adapter:[0-9a-f]{40}\r?$') {
     throw "Telegram Adapter image должен быть закреплён полным Git SHA."
+}
+if ($versions -notmatch '(?m)^CONNECTION_SERVICE_IMAGE=ghcr\.io/portable-agent/connection-service:[0-9a-f]{40}\r?$') {
+    throw "Connection Service image не закреплён полным Git SHA."
 }
 if ($versions -notmatch '(?m)^TEST_LAB_REF=[0-9a-f]{40}\r?$') {
     throw "Test Lab должен быть закреплён полным Git SHA."
@@ -338,7 +356,7 @@ if (-not (Test-Path -LiteralPath $appWorkflowPath)) {
     throw "Нет CI-проверки полного Compose-среза."
 }
 $appWorkflow = Get-Content -Raw -LiteralPath $appWorkflowPath
-foreach ($required in @("versions.env", "channel-gateway", "agent-runtime", "CONVERSATION_SERVICE_CONTEXT", "repository: portable-agent/conversation-service", 'ref: ${{ steps.versions.outputs.conversation }}', "TELEGRAM_ADAPTER_CONTEXT", "repository: portable-agent/telegram-adapter", 'ref: ${{ steps.versions.outputs.telegram }}', "repository: portable-agent/test-lab", 'ref: ${{ steps.versions.outputs.test_lab }}', "start-local.ps1 -Apps", "run-test-lab.ps1", "stop-local.ps1 -DeleteData", "if: always()")) {
+foreach ($required in @("versions.env", "channel-gateway", "agent-runtime", "CONVERSATION_SERVICE_CONTEXT", "repository: portable-agent/conversation-service", 'ref: ${{ steps.versions.outputs.conversation }}', "CONNECTION_SERVICE_CONTEXT", "repository: portable-agent/connection-service", 'ref: ${{ steps.versions.outputs.connection }}', "TELEGRAM_ADAPTER_CONTEXT", "repository: portable-agent/telegram-adapter", 'ref: ${{ steps.versions.outputs.telegram }}', "repository: portable-agent/test-lab", 'ref: ${{ steps.versions.outputs.test_lab }}', "start-local.ps1 -Apps", "run-test-lab.ps1", "stop-local.ps1 -DeleteData", "if: always()")) {
     if ($appWorkflow -notmatch [regex]::Escape($required)) {
         throw "CI-проверка полного среза не содержит $required."
     }

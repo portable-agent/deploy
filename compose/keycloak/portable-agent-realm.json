@@ -41,6 +41,14 @@
         "include.in.token.scope": "true",
         "display.on.consent.screen": "false"
       }
+    },
+    {
+      "name": "connection:token",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
     }
   ],
   "clients": [
@@ -61,6 +69,13 @@
     {
       "clientId": "calendar-mcp",
       "name": "Calendar MCP Resource Server",
+      "enabled": true,
+      "bearerOnly": true,
+      "protocol": "openid-connect"
+    },
+    {
+      "clientId": "connection-service",
+      "name": "Connection Service Resource Server",
       "enabled": true,
       "bearerOnly": true,
       "protocol": "openid-connect"
@@ -90,7 +105,7 @@
       "clientAuthenticatorType": "client-secret",
       "secret": "${ACTION_SERVICE_CLIENT_SECRET}",
       "protocol": "openid-connect",
-      "defaultClientScopes": ["basic", "mcp:call", "calendar:write"],
+      "defaultClientScopes": ["basic", "mcp:call", "calendar:write", "connection:token"],
       "protocolMappers": [
         {
           "name": "tenant-id",
@@ -123,6 +138,17 @@
           "consentRequired": false,
           "config": {
             "included.client.audience": "calendar-mcp",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
+          "name": "connection-service-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "connection-service",
             "access.token.claim": "true",
             "introspection.token.claim": "true"
           }
@@ -206,6 +232,18 @@
           "consentRequired": false,
           "config": {
             "included.client.audience": "conversation-service",
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
+          "name": "connection-service-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "connection-service",
             "id.token.claim": "false",
             "access.token.claim": "true",
             "introspection.token.claim": "true"
@@ -295,6 +333,18 @@
           "consentRequired": false,
           "config": {
             "included.client.audience": "calendar-mcp",
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
+          "name": "connection-service-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "connection-service",
             "id.token.claim": "false",
             "access.token.claim": "true",
             "introspection.token.claim": "true"

@@ -33,6 +33,7 @@ jobs:
       CONVERSATION_SERVICE_CONTEXT: ${{ github.workspace }}/repos/conversation-service
       MCP_GATEWAY_CONTEXT: ${{ github.workspace }}/repos/mcp-gateway
       CALENDAR_MCP_CONTEXT: ${{ github.workspace }}/repos/calendar-mcp
+      CONNECTION_SERVICE_CONTEXT: ${{ github.workspace }}/repos/connection-service
       TELEGRAM_ADAPTER_CONTEXT: ${{ github.workspace }}/repos/telegram-adapter
       TEST_LAB_PATH: ${{ github.workspace }}/repos/test-lab
     steps:
@@ -50,6 +51,7 @@ jobs:
           "conversation=$($versions.CONVERSATION_SERVICE_IMAGE.Split(':')[-1])" >> $env:GITHUB_OUTPUT
           "gateway=$($versions.MCP_GATEWAY_IMAGE.Split(':')[-1])" >> $env:GITHUB_OUTPUT
           "calendar=$($versions.CALENDAR_MCP_IMAGE.Split(':')[-1])" >> $env:GITHUB_OUTPUT
+          "connection=$($versions.CONNECTION_SERVICE_IMAGE.Split(':')[-1])" >> $env:GITHUB_OUTPUT
           "telegram=$($versions.TELEGRAM_ADAPTER_IMAGE.Split(':')[-1])" >> $env:GITHUB_OUTPUT
           "test_lab=$($versions.TEST_LAB_REF)" >> $env:GITHUB_OUTPUT
 
@@ -94,6 +96,13 @@ jobs:
           repository: portable-agent/calendar-mcp
           ref: ${{ steps.versions.outputs.calendar }}
           path: repos/calendar-mcp
+
+      - name: Получить Connection Service
+        uses: actions/checkout@v7
+        with:
+          repository: portable-agent/connection-service
+          ref: ${{ steps.versions.outputs.connection }}
+          path: repos/connection-service
 
       - name: Получить Telegram Adapter
         uses: actions/checkout@v7

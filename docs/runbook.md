@@ -20,12 +20,13 @@
 1. Выполни `task status`, затем `task verify`.
 2. Проверь, что рядом лежат репозитории `portable-agent-channel-gateway`, `portable-agent-agent-runtime`,
    `portable-agent-action-service`, `portable-agent-conversation-service`, `portable-agent-mcp-gateway`
-   и `portable-agent-calendar-mcp`,
+   `portable-agent-calendar-mcp` и `portable-agent-connection-service`,
    либо задай их `*_CONTEXT` в `.env`.
 3. Если Keycloak сообщает о старом fixture, локально выполни
    `task reset`. Команда запрашивает подтверждение и удаляет только volumes этого Compose project.
 4. Проверь `/health/live` Channel Gateway и Agent Runtime, `/actuator/health/readiness` Action Service,
-   `/actuator/health` Conversation Service и `/health` двух MCP-сервисов.
+   `/actuator/health` Conversation Service, `/actuator/health/readiness` Connection Service и
+   `/health` обоих экземпляров Calendar MCP.
 5. Не включай Calendar test API вне локального профиля `apps`.
 
 После запуска проверь весь backend-путь одной командой:
@@ -41,6 +42,15 @@ Action Service с событием в тестовом календарном к
 
 Первый Docker build скачивает Gradle и Python packages и может быть заметно медленнее повторных
 запусков. BuildKit сохраняет слои для следующих сборок.
+
+## Google Calendar не подключается
+
+1. Проверь, что `GOOGLE_OAUTH_ENABLED=true` задан в локальном `.env`.
+2. Сравни `GOOGLE_OAUTH_REDIRECT_URI` с redirect URI в Google Cloud Console посимвольно.
+3. Посмотри `task service:logs SERVICE=connection-service`; OAuth tokens не должны выводиться в лог.
+4. Посмотри `task service:logs SERVICE=google-calendar-mcp`; этот экземпляр не хранит credentials,
+   а запрашивает короткоживущий access token у Connection Service.
+5. Не включай Google credentials в `.env.example`, Compose или GitHub Actions.
 
 ## Preview smoke не запускается
 

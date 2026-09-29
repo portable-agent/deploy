@@ -2,7 +2,7 @@
     [Parameter(Mandatory = $true)]
     [ValidateSet("Status", "Stop", "Restart", "Logs")]
     [string]$Action,
-    [ValidateSet("channel-gateway", "agent-runtime", "action-service", "conversation-service", "mcp-gateway", "calendar-mcp", "telegram-adapter")]
+    [ValidateSet("channel-gateway", "agent-runtime", "action-service", "conversation-service", "mcp-gateway", "calendar-mcp", "google-calendar-mcp", "connection-service", "telegram-adapter")]
     [string]$Service,
     [ValidateRange(1, 10000)]
     [int]$Tail = 100
@@ -11,6 +11,7 @@
 $ErrorActionPreference = "Stop"
 . "$PSScriptRoot/local-settings.ps1"
 Initialize-LocalTelegramKey
+Initialize-LocalConnectionKey
 if ($Action -ne "Status" -and -not $Service) {
     throw "Для команды $Action укажи -Service."
 }
