@@ -2,7 +2,7 @@
     [switch]$Observe,
     [switch]$Apps,
     [switch]$Model,
-    [ValidateSet("channel-gateway", "agent-runtime", "action-service", "conversation-service", "mcp-gateway", "calendar-mcp", "telegram-adapter")]
+    [ValidateSet("channel-gateway", "agent-runtime", "action-service", "conversation-service", "mcp-gateway", "calendar-mcp", "google-calendar-mcp", "connection-service", "telegram-adapter")]
     [string]$Service
 )
 $ErrorActionPreference = "Stop"
@@ -19,6 +19,7 @@ if ($runningOnWindows) { $composeFiles += @("-f", "compose/windows.local.yaml") 
 $appComposeFiles = @($composeFiles + @("-f", "compose/apps.local.yaml"))
 if ($Model) { $appComposeFiles += @("-f", "compose/model.local.yaml") }
 Initialize-LocalTelegramKey
+Initialize-LocalConnectionKey
 $coreProfiles = @("--profile", "core")
 if ($Observe) { $coreProfiles += @("--profile", "observe") }
 & docker compose @envFiles @composeFiles @coreProfiles run --rm postgres-bootstrap

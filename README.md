@@ -135,8 +135,9 @@ Telegram Update и Bot API response.
 `TEST_LAB_PATH` по умолчанию указывает на соседний `../portable-agent-test-lab`; путь можно
 переопределить в `.env`. Channel Gateway доступен на `http://localhost:18084`, Agent Runtime — на
 `http://localhost:18080`, Action API — на
-`http://localhost:18081`, MCP Gateway — на `http://localhost:18083`, а Calendar MCP — на
-`http://localhost:18082`. Conversation Service доступен на `http://localhost:18085`. Новый маршрут
+`http://localhost:18081`, MCP Gateway — на `http://localhost:18083`, fake Calendar MCP — на
+`http://localhost:18082`, а Google Calendar MCP — на `http://localhost:18089`. Conversation Service
+доступен на `http://localhost:18085`, Connection Service — на `http://localhost:18088`. Новый маршрут
 `/api/v1/conversations/messages` в Channel Gateway передаёт сообщения в него; старый маршрут
 `/api/v1/messages` временно сохранён для обратной совместимости. Решение confirmation-виджета
 отправляется в `/api/v1/actions/{actionId}/decisions` того же Gateway и только затем попадает в Action
@@ -148,18 +149,22 @@ manager, а не из Git.
 Локальный Keycloak импортирует realm `portable-agent`. Публичный тестовый client
 `portable-agent-local` и пользователь `local-user` с паролем `local-user-change-me` существуют только
 в Compose fixture. Отдельный confidential client `action-service` выдаёт worker служебный токен с
-`tenant_id`, audience `mcp-gateway` и `calendar-mcp`, scopes `mcp:call` и `calendar:write`. Значения
+`tenant_id`, audience `mcp-gateway`, `calendar-mcp` и `connection-service`, scopes `mcp:call`,
+`calendar:write` и `connection:token`. Значения
 локального секрета и tenant приходят из `.env`, а не зашиты в image. Отдельный confidential client
 `telegram-adapter` включает OAuth Device Authorization Grant и выдаёт пользовательский токен с теми
 же `tenant_id` и audience backend-пути. PostgreSQL создаёт отдельные БД `actions`, `conversations` и
-`telegram_adapter`.
+`telegram_adapter` и `connections`.
 
 Проверочный API Calendar MCP включён только в локальном профиле `apps`, привязан к loopback-порту и
 защищён `CALENDAR_TEST_API_KEY`. Хранилище fake-calendar пока находится в памяти: перезапуск контейнера
-очищает созданные тестовые встречи.
+очищает созданные тестовые встречи. Второй экземпляр того же Calendar MCP использует стратегию
+`google-calendar` и получает короткоживущий Google token через Connection Service. OAuth credentials и
+зашифрованные пользовательские refresh tokens не попадают в Calendar MCP.
 
 После запуска скрипт получает настоящий JWT и сверяет пользователя, `tenant_id` и audience
-`channel-gateway`, `conversation-service`, `agent-runtime`, `action-service` и `calendar-mcp` с realm fixture.
+`channel-gateway`, `conversation-service`, `agent-runtime`, `action-service`, `calendar-mcp` и
+`connection-service` с realm fixture.
 Один пользовательский токен проходит независимую проверку во всех пользовательских API.
 Если Keycloak volume создан старой версией fixture, запуск остановится с командой для явного
 пересоздания локальных данных.

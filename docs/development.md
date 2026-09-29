@@ -23,7 +23,14 @@ Taskfile — единая точка входа. Внутренние PowerShell
 `test-lab`; быстрый `task test:e2e` по-прежнему использует детерминированную demo-модель.
 
 Допустимые имена: `channel-gateway`, `conversation-service`, `agent-runtime`, `action-service`,
-`mcp-gateway`, `calendar-mcp` и `telegram-adapter`. Неизвестное имя отклоняется до вызова Docker.
+`mcp-gateway`, `calendar-mcp`, `google-calendar-mcp`, `connection-service` и `telegram-adapter`.
+Неизвестное имя отклоняется до вызова Docker.
+
+Для настоящего Google Calendar добавь только в игнорируемый `.env` значения
+`GOOGLE_OAUTH_ENABLED=true`, `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` и
+`GOOGLE_OAUTH_REDIRECT_URI`. Redirect URI должен оканчиваться на
+`/api/v1/connections/callback` и точно совпадать с URI в Google Cloud Console. Без этих значений
+обычный стенд и acceptance-тест используют `fake-calendar` и не обращаются во внешний API.
 
 Например, для локальной проверки HTTP-потока диалога выполни:
 

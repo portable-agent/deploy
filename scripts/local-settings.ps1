@@ -22,3 +22,17 @@ function Initialize-LocalTelegramKey {
         $hash.Dispose()
     }
 }
+
+function Initialize-LocalConnectionKey {
+    $key = Get-LocalSetting "CONNECTION_TOKEN_KEY_BASE64"
+    if ($key -ne "derive-from-local-action-secret") { return }
+
+    $actionSecret = Get-LocalSetting "ACTION_SERVICE_CLIENT_SECRET"
+    $hash = [Security.Cryptography.SHA256]::Create()
+    try {
+        $bytes = [Text.Encoding]::UTF8.GetBytes("portable-agent-local-connection:$actionSecret")
+        $env:CONNECTION_TOKEN_KEY_BASE64 = [Convert]::ToBase64String($hash.ComputeHash($bytes))
+    } finally {
+        $hash.Dispose()
+    }
+}

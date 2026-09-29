@@ -1,7 +1,7 @@
 # Deploy
 
 Репозиторий содержит инженерный полигон Portable Agent. Compose поднимает инфраструктуру и локальный
-slice `Telegram Adapter → Channel Gateway → Conversation Service → Agent Runtime → Action Service → MCP Gateway → Calendar MCP`. Минимальный
+slice `Telegram Adapter → Channel Gateway → Conversation Service → Agent Runtime → Action Service → MCP Gateway → Calendar MCP → Connection Service`. Минимальный
 Helm chart устанавливается и проверяется в одноразовом k3d-кластере.
 
 Текущий результат:
@@ -12,7 +12,8 @@ Helm chart устанавливается и проверяется в одно�
 4. воспроизводимый Compose с локальной сборкой всех приложений;
 5. отдельная БД и Conversation Service, создающий Action и виджет подтверждения;
 6. изолированный ephemeral preview namespace для инфраструктурных pull request;
-7. Telegram Adapter, Keycloak Device Flow и локальный fake Telegram API без настоящего bot token.
+7. Telegram Adapter, Keycloak Device Flow и локальный fake Telegram API без настоящего bot token;
+8. два календарных режима: детерминированный fake для CI и Google через отдельный Connection Service.
 
 Первый переносимый виджет подтверждения входит в системный acceptance-путь. Публичный preview URL
 появится после подключения общего Kubernetes-кластера и контроллера жизненного цикла окружений.

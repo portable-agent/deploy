@@ -32,7 +32,9 @@ try {
         -or $audiences -notcontains "agent-runtime" `
         -or $audiences -notcontains "action-service" `
         -or $audiences -notcontains "conversation-service" `
-        -or $audiences -notcontains "calendar-mcp" -or $scopes -notcontains "calendar:write") {
+        -or $audiences -notcontains "calendar-mcp" `
+        -or $audiences -notcontains "connection-service" `
+        -or $scopes -notcontains "calendar:write") {
         throw "JWT claims пользователя не содержат tenant и audience сервисов."
     }
 
@@ -51,8 +53,10 @@ try {
     if ($serviceClaims.tenant_id -ne $ExpectedTenant `
         -or $serviceAudiences -notcontains "mcp-gateway" `
         -or $serviceAudiences -notcontains "calendar-mcp" `
+        -or $serviceAudiences -notcontains "connection-service" `
         -or $serviceScopes -notcontains "mcp:call" `
-        -or $serviceScopes -notcontains "calendar:write") {
+        -or $serviceScopes -notcontains "calendar:write" `
+        -or $serviceScopes -notcontains "connection:token") {
         throw "Service token action-service не содержит нужные claims."
     }
 

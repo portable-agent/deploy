@@ -16,6 +16,8 @@ services:
       ACTION_DB_PASSWORD: ${ACTION_DB_PASSWORD:?set ACTION_DB_PASSWORD}
       CONVERSATION_DB_USER: ${CONVERSATION_DB_USER:?set CONVERSATION_DB_USER}
       CONVERSATION_DB_PASSWORD: ${CONVERSATION_DB_PASSWORD:?set CONVERSATION_DB_PASSWORD}
+      CONNECTION_DB_USER: ${CONNECTION_DB_USER:?set CONNECTION_DB_USER}
+      CONNECTION_DB_PASSWORD: ${CONNECTION_DB_PASSWORD:?set CONNECTION_DB_PASSWORD}
       TELEGRAM_DB_USER: ${TELEGRAM_DB_USER:?set TELEGRAM_DB_USER}
       TELEGRAM_DB_PASSWORD: ${TELEGRAM_DB_PASSWORD:?set TELEGRAM_DB_PASSWORD}
     ports:
@@ -112,6 +114,8 @@ services:
       ACTION_DB_PASSWORD: ${ACTION_DB_PASSWORD:?set ACTION_DB_PASSWORD}
       CONVERSATION_DB_USER: ${CONVERSATION_DB_USER:?set CONVERSATION_DB_USER}
       CONVERSATION_DB_PASSWORD: ${CONVERSATION_DB_PASSWORD:?set CONVERSATION_DB_PASSWORD}
+      CONNECTION_DB_USER: ${CONNECTION_DB_USER:?set CONNECTION_DB_USER}
+      CONNECTION_DB_PASSWORD: ${CONNECTION_DB_PASSWORD:?set CONNECTION_DB_PASSWORD}
       TELEGRAM_DB_USER: ${TELEGRAM_DB_USER:?set TELEGRAM_DB_USER}
       TELEGRAM_DB_PASSWORD: ${TELEGRAM_DB_PASSWORD:?set TELEGRAM_DB_PASSWORD}
     volumes:
@@ -271,6 +275,7 @@ services:
     profiles: [apps]
     image: ${CALENDAR_MCP_IMAGE:?set CALENDAR_MCP_IMAGE}
     environment:
+      CALENDAR_PROVIDER: fake-calendar
       CALENDAR_TEST_API_ENABLED: "true"
       CALENDAR_TEST_API_KEY: ${CALENDAR_TEST_API_KEY:?set CALENDAR_TEST_API_KEY}
       CALENDAR_OIDC_ISSUER_URL: http://localhost:${KEYCLOAK_PORT:-8081}/realms/portable-agent
@@ -292,6 +297,71 @@ services:
       retries: 30
     networks: [platform]
 
+  connection-service:
+    profiles: [apps]
+    image: ${CONNECTION_SERVICE_IMAGE:?set CONNECTION_SERVICE_IMAGE}
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/connections
+      DATABASE_USER: ${CONNECTION_DB_USER:?set CONNECTION_DB_USER}
+      DATABASE_PASSWORD: ${CONNECTION_DB_PASSWORD:?set CONNECTION_DB_PASSWORD}
+      OIDC_ISSUER: http://localhost:${KEYCLOAK_PORT:-8081}/realms/portable-agent
+      OIDC_JWKS_URL: http://keycloak:8080/realms/portable-agent/protocol/openid-connect/certs
+      OIDC_AUDIENCE: connection-service
+      OIDC_INTERNAL_CLIENTS: action-service
+      CONNECTION_TOKEN_KEYS_ENABLED: "true"
+      CONNECTION_TOKEN_KEYS_CURRENT_VERSION: "1"
+      CONNECTION_TOKEN_KEYS_ITEMS_0_VERSION: "1"
+      CONNECTION_TOKEN_KEYS_ITEMS_0_VALUE: ${CONNECTION_TOKEN_KEY_BASE64:?set CONNECTION_TOKEN_KEY_BASE64}
+      GOOGLE_OAUTH_ENABLED: ${GOOGLE_OAUTH_ENABLED:-false}
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
+      GOOGLE_OAUTH_REDIRECT_URI: ${GOOGLE_OAUTH_REDIRECT_URI:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${CONNECTION_SERVICE_PORT:-18088}:8080"
+    healthcheck:
+      test:
+        [
+          CMD-SHELL,
+          "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080 && printf \"GET /actuator/health/readiness HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3 && grep -q \"HTTP/1.1 200 \" <&3'",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 20s
+    networks: [platform]
+
+  google-calendar-mcp:
+    profiles: [apps]
+    image: ${CALENDAR_MCP_IMAGE:?set CALENDAR_MCP_IMAGE}
+    environment:
+      CALENDAR_PROVIDER: google-calendar
+      CALENDAR_OIDC_ISSUER_URL: http://localhost:${KEYCLOAK_PORT:-8081}/realms/portable-agent
+      CALENDAR_OIDC_JWKS_URL: http://keycloak:8080/realms/portable-agent/protocol/openid-connect/certs
+      CALENDAR_OIDC_AUDIENCE: calendar-mcp
+      CALENDAR_MCP_RESOURCE_URL: http://google-calendar-mcp:8080/mcp
+      CALENDAR_MCP_REQUIRED_SCOPES: '["calendar:write"]'
+      CALENDAR_MCP_ALLOWED_HOSTS: '["google-calendar-mcp:8080","localhost:*","127.0.0.1:*"]'
+      CALENDAR_MCP_ALLOWED_ORIGINS: '["http://google-calendar-mcp:8080","http://localhost:*","http://127.0.0.1:*"]'
+      CALENDAR_CONNECTION_URL: http://connection-service:8080
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      connection-service:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${GOOGLE_CALENDAR_MCP_PORT:-18089}:8080"
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    networks: [platform]
+
   mcp-gateway:
     profiles: [apps]
     image: ${MCP_GATEWAY_IMAGE:?set MCP_GATEWAY_IMAGE}
@@ -303,11 +373,13 @@ services:
       OIDC_JWKS_URL: http://keycloak:8080/realms/portable-agent/protocol/openid-connect/certs
       OIDC_AUDIENCE: mcp-gateway
       OIDC_REQUIRED_SCOPE: mcp:call
-      MCP_CONNECTORS_JSON: '[{"name":"fake-calendar","url":"http://calendar-mcp:8080/mcp","tools":["create_event"]}]'
+      MCP_CONNECTORS_JSON: '[{"name":"fake-calendar","url":"http://calendar-mcp:8080/mcp","tools":["create_event"]},{"name":"google-calendar","url":"http://google-calendar-mcp:8080/mcp","tools":["create_event"]}]'
     depends_on:
       keycloak:
         condition: service_healthy
       calendar-mcp:
+        condition: service_healthy
+      google-calendar-mcp:
         condition: service_healthy
     ports:
       - "127.0.0.1:${MCP_GATEWAY_PORT:-18083}:8080"
@@ -336,7 +408,7 @@ services:
       MCP_GATEWAY_TOKEN_URL: http://keycloak:8080/realms/portable-agent/protocol/openid-connect/token
       MCP_GATEWAY_CLIENT_ID: action-service
       MCP_GATEWAY_CLIENT_SECRET: ${ACTION_SERVICE_CLIENT_SECRET:?set ACTION_SERVICE_CLIENT_SECRET}
-      MCP_GATEWAY_SCOPE: mcp:call calendar:write
+      MCP_GATEWAY_SCOPE: mcp:call calendar:write connection:token
       MCP_GATEWAY_TENANT_ID: ${ACTION_SERVICE_TENANT_ID:?set ACTION_SERVICE_TENANT_ID}
       MCP_GATEWAY_CONNECT_TIMEOUT: 3s
       MCP_GATEWAY_READ_TIMEOUT: 10s
