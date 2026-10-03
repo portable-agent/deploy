@@ -160,6 +160,17 @@ if ($composeText -notmatch '(?ms)^  channel-gateway:.*?OIDC_AUDIENCE: channel-ga
 if ($composeText -notmatch 'TEMPORAL_ADMIN_ADDRESS:-temporal:7233') {
     throw "Portable Compose должен обращаться к Temporal по имени сервиса."
 }
+$temporalNamespaceScript = Get-Content -Raw -LiteralPath "compose/temporal/scripts/create-namespace.sh"
+foreach ($attribute in @("ActionKind", "ActionConnector", "ActionTenantId", "ActionActorId", "ActionStatus")) {
+    if ($temporalNamespaceScript -notmatch [regex]::Escape($attribute)) {
+        throw "Temporal bootstrap не регистрирует Search Attribute $attribute."
+    }
+}
+if ($temporalNamespaceScript -notmatch 'operator search-attribute list' `
+    -or $temporalNamespaceScript -notmatch 'operator search-attribute create' `
+    -or $temporalNamespaceScript -notmatch '\-\-type Keyword') {
+    throw "Temporal bootstrap должен идемпотентно регистрировать Keyword Search Attributes."
+}
 $windowsOverride = Get-Content -Raw -LiteralPath "compose/windows.local.yaml"
 if ($windowsOverride -notmatch 'host.docker.internal:\$\{TEMPORAL_PORT:-7233\}' `
     -or $windowsOverride -notmatch 'host.docker.internal:host-gateway') {

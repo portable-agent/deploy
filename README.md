@@ -174,6 +174,10 @@ Worker, Temporal UI и Linux Compose используют внутренний �
 потому что Docker Desktop иногда не проводит этот gRPC по имени сервиса. Адрес можно переопределить
 переменной `TEMPORAL_ADMIN_ADDRESS`.
 
+Тот же bootstrap идемпотентно создаёт Keyword Search Attributes `ActionKind`, `ActionConnector`,
+`ActionTenantId`, `ActionActorId`, `ActionStatus`. Поэтому Action Service может добавлять понятные
+фильтры в Temporal UI как при первом запуске, так и поверх уже существующего локального volume.
+
 Все быстрые проверки:
 
 ```powershell
