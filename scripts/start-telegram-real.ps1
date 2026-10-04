@@ -6,11 +6,21 @@ $ErrorActionPreference = "Stop"
 
 $token = Get-LocalSetting "TELEGRAM_REAL_BOT_TOKEN"
 $webhookSecret = Get-LocalSetting "TELEGRAM_REAL_WEBHOOK_SECRET"
+$webhookAttemptsText = Get-LocalSetting "TELEGRAM_WEBHOOK_SET_ATTEMPTS"
+$webhookDelayText = Get-LocalSetting "TELEGRAM_WEBHOOK_SET_DELAY_SECONDS"
 if ($token -notmatch '^\d+:[A-Za-z0-9_-]{20,}$') {
     throw "Set a valid TELEGRAM_REAL_BOT_TOKEN from BotFather in local .env."
 }
 if ($webhookSecret -notmatch '^[A-Za-z0-9_-]{32,256}$') {
     throw "TELEGRAM_REAL_WEBHOOK_SECRET must contain 32-256 characters: A-Z, a-z, 0-9, _ or -."
+}
+$webhookAttempts = 0
+$webhookDelaySeconds = 0
+if (-not [int]::TryParse($webhookAttemptsText, [ref]$webhookAttempts) -or $webhookAttempts -lt 1) {
+    throw "TELEGRAM_WEBHOOK_SET_ATTEMPTS must be a positive integer."
+}
+if (-not [int]::TryParse($webhookDelayText, [ref]$webhookDelaySeconds) -or $webhookDelaySeconds -lt 1) {
+    throw "TELEGRAM_WEBHOOK_SET_DELAY_SECONDS must be a positive integer."
 }
 
 $env:TELEGRAM_REAL_BOT_TOKEN = $token
@@ -56,19 +66,35 @@ $apiUrl = "https://api.telegram.org/bot$token"
 try {
     $bot = Invoke-RestMethod -Method Post -Uri "$apiUrl/getMe"
     if (-not $bot.ok -or -not $bot.result.username) { throw "invalid getMe" }
-    $hook = Invoke-RestMethod -Method Post -Uri "$apiUrl/setWebhook" -ContentType "application/json" -Body (@{
-        url = "$tunnelUrl/webhooks/telegram"
-        secret_token = $webhookSecret
-        allowed_updates = @("message", "callback_query")
-        drop_pending_updates = $false
-    } | ConvertTo-Json)
-    if (-not $hook.ok) { throw "invalid setWebhook" }
-    $info = Invoke-RestMethod -Method Post -Uri "$apiUrl/getWebhookInfo"
-    if (-not $info.ok -or $info.result.url -ne "$tunnelUrl/webhooks/telegram") {
-        throw "invalid getWebhookInfo"
-    }
 } catch {
-    throw "Telegram Bot API rejected the bot token or temporary webhook. Secrets were not printed."
+    throw "Telegram Bot API rejected the bot token. Secrets were not printed."
+}
+
+$webhookBody = @{
+    url = "$tunnelUrl/webhooks/telegram"
+    secret_token = $webhookSecret
+    allowed_updates = @("message", "callback_query")
+    drop_pending_updates = $false
+} | ConvertTo-Json
+$hookReady = $false
+for ($attempt = 1; $attempt -le $webhookAttempts -and -not $hookReady; $attempt += 1) {
+    try {
+        $hook = Invoke-RestMethod -Method Post -Uri "$apiUrl/setWebhook" `
+            -ContentType "application/json" -Body $webhookBody
+        $hookReady = [bool]$hook.ok
+    } catch {
+        if ($attempt -eq $webhookAttempts) { break }
+    }
+    if (-not $hookReady) { Start-Sleep -Seconds $webhookDelaySeconds }
+}
+if (-not $hookReady) {
+    throw "Telegram did not accept the temporary webhook after $webhookAttempts attempts. Secrets were not printed."
+}
+try {
+    $info = Invoke-RestMethod -Method Post -Uri "$apiUrl/getWebhookInfo"
+    if (-not $info.ok -or $info.result.url -ne "$tunnelUrl/webhooks/telegram") { throw "invalid webhook" }
+} catch {
+    throw "Telegram did not confirm the temporary webhook. Secrets were not printed."
 }
 
 Write-Host "Real Telegram connected: @$($bot.result.username)"

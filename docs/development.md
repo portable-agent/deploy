@@ -53,6 +53,9 @@ bot token для разработки и CI не требуется.
 Когда нужно проверить настоящий Telegram, добавь `TELEGRAM_REAL_BOT_TOKEN` и
 `TELEGRAM_REAL_WEBHOOK_SECRET` в игнорируемый `.env`, затем выполни `task telegram:real:up`.
 Команда поднимет временный HTTPS tunnel, проверит bot token и зарегистрирует защищённый webhook.
+Если DNS нового Quick Tunnel распространяется с задержкой, команда ограниченно повторит регистрацию.
+Предел и пауза задаются через `TELEGRAM_WEBHOOK_SET_ATTEMPTS` и
+`TELEGRAM_WEBHOOK_SET_DELAY_SECONDS`.
 После ручного сценария выполни `task telegram:real:down`: внешний webhook будет удалён до возврата
 адаптера к fake API.
 
