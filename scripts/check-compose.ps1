@@ -317,10 +317,23 @@ foreach ($required in @("TELEGRAM_REAL_BOT_TOKEN", "TELEGRAM_REAL_WEBHOOK_SECRET
     }
 }
 $realTelegramScript = Get-Content -Raw -LiteralPath "scripts/start-telegram-real.ps1"
+$envExample = Get-Content -Raw -LiteralPath ".env.example"
 foreach ($required in @("getMe", "setWebhook", "getWebhookInfo", "trycloudflare", "allowed_updates", "callback_query")) {
     if ($realTelegramScript -notmatch [regex]::Escape($required)) {
         throw "Запуск настоящего Telegram не содержит $required."
     }
+}
+foreach ($setting in @("TELEGRAM_WEBHOOK_SET_ATTEMPTS", "TELEGRAM_WEBHOOK_SET_DELAY_SECONDS")) {
+    if ($envExample -notmatch "(?m)^$setting=[1-9][0-9]*\r?$") {
+        throw "В .env.example нет положительной настройки $setting."
+    }
+    if ($realTelegramScript -notmatch [regex]::Escape($setting)) {
+        throw "Запуск настоящего Telegram не использует $setting."
+    }
+}
+if ($realTelegramScript -notmatch 'for \(\$attempt = 1; \$attempt -le \$webhookAttempts' `
+    -or $realTelegramScript -notmatch 'Start-Sleep -Seconds \$webhookDelaySeconds') {
+    throw "Настройка Telegram webhook должна повторяться, пока DNS Quick Tunnel распространяется."
 }
 if ($realTelegramScript -notmatch '\[switch\]\$Model' `
     -or $realTelegramScript -notmatch 'compose/model.local.yaml') {

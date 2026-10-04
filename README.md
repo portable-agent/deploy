@@ -131,6 +131,9 @@ task telegram:real:down
 Quick Tunnel предназначен только для ручной локальной проверки. Команда не печатает bot token и
 не сохраняет его в Compose-файлах. После живого прогона в тесты переносятся только обезличенные формы
 Telegram Update и Bot API response.
+Если новый адрес ещё не виден DNS-серверам Telegram, команда ограниченно повторяет `setWebhook`.
+Число попыток и задержка задаются через `TELEGRAM_WEBHOOK_SET_ATTEMPTS` и
+`TELEGRAM_WEBHOOK_SET_DELAY_SECONDS`.
 
 `TEST_LAB_PATH` по умолчанию указывает на соседний `../portable-agent-test-lab`; путь можно
 переопределить в `.env`. Channel Gateway доступен на `http://localhost:18084`, Agent Runtime — на
