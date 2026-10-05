@@ -130,6 +130,14 @@ jobs:
         shell: pwsh
         run: ./scripts/run-test-lab.ps1
 
+      - name: Включить тестовый профиль подключения
+        shell: pwsh
+        run: ./scripts/start-local.ps1 -Apps -ConnectionTest
+
+      - name: Проверить виджет подключения
+        shell: pwsh
+        run: ./scripts/run-test-lab.ps1 -TaskName test:connection
+
       - name: Удалить только тестовый Compose project
         if: always()
         shell: pwsh

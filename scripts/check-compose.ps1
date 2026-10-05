@@ -228,6 +228,7 @@ foreach ($taskName in @(
     "doctor",
     "status",
     "test:e2e",
+    "test:connection",
     "test:model",
     "down",
     "reset"
@@ -244,6 +245,10 @@ if ($taskfile -notmatch 'scripts/start-local\.ps1' `
 }
 if ($startScript -notmatch '\[string\]\$Service' -or $startScript -notmatch '\$Service') {
     throw "start-local должен уметь запускать один выбранный сервис."
+}
+if ($startScript -notmatch '\[switch\]\$ConnectionTest' `
+    -or $startScript -notmatch 'compose/connection-test.local.yaml') {
+    throw "start-local должен поддерживать изолированный connection acceptance профиль."
 }
 $serviceScriptPath = "scripts/service-local.ps1"
 if (-not (Test-Path -LiteralPath $serviceScriptPath)) {
@@ -282,9 +287,19 @@ $testLabRunner = Get-Content -Raw -LiteralPath $testLabRunnerPath
 if ($testLabRunner -notmatch '\$containerIds\s*=\s*@\(\s*\r?\n\s*\(& docker ps') {
     throw "Результат docker ps должен сохраняться массивом до обращения по индексу."
 }
-foreach ($required in @("TEST_LAB_PATH", "portable-agent-realm.json", "CALENDAR_TEST_API_KEY", "DOCKER_NETWORK", "docker inspect", "com.docker.compose.service=channel-gateway", "http://channel-gateway:8080", "http://action-service:8080", "http://calendar-mcp:8080", "task", "test:e2e", "test:model", "TaskName")) {
+foreach ($required in @("TEST_LAB_PATH", "portable-agent-realm.json", "CALENDAR_TEST_API_KEY", "DOCKER_NETWORK", "docker inspect", "com.docker.compose.service=channel-gateway", "http://channel-gateway:8080", "http://action-service:8080", "http://calendar-mcp:8080", "task", "test:e2e", "test:model", "test:connection", "TaskName")) {
     if ($testLabRunner -notmatch [regex]::Escape($required)) {
         throw "Адаптер test-lab не содержит $required."
+    }
+}
+$connectionOverridePath = "compose/connection-test.local.yaml"
+if (-not (Test-Path -LiteralPath $connectionOverridePath)) {
+    throw "Нет Compose override для connection acceptance."
+}
+$connectionOverride = Get-Content -Raw -LiteralPath $connectionOverridePath
+foreach ($required in @("AVAILABLE_CONNECTORS", "google-calendar", "GOOGLE_OAUTH_ENABLED", "GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET", "GOOGLE_OAUTH_REDIRECT_URI")) {
+    if ($connectionOverride -notmatch [regex]::Escape($required)) {
+        throw "Connection acceptance override не содержит $required."
     }
 }
 $versions = Get-Content -Raw -LiteralPath "config/versions.env"
@@ -380,7 +395,7 @@ if (-not (Test-Path -LiteralPath $appWorkflowPath)) {
     throw "Нет CI-проверки полного Compose-среза."
 }
 $appWorkflow = Get-Content -Raw -LiteralPath $appWorkflowPath
-foreach ($required in @("versions.env", "channel-gateway", "agent-runtime", "CONVERSATION_SERVICE_CONTEXT", "repository: portable-agent/conversation-service", 'ref: ${{ steps.versions.outputs.conversation }}', "CONNECTION_SERVICE_CONTEXT", "repository: portable-agent/connection-service", 'ref: ${{ steps.versions.outputs.connection }}', "TELEGRAM_ADAPTER_CONTEXT", "repository: portable-agent/telegram-adapter", 'ref: ${{ steps.versions.outputs.telegram }}', "repository: portable-agent/test-lab", 'ref: ${{ steps.versions.outputs.test_lab }}', "start-local.ps1 -Apps", "run-test-lab.ps1", "stop-local.ps1 -DeleteData", "if: always()")) {
+foreach ($required in @("versions.env", "channel-gateway", "agent-runtime", "CONVERSATION_SERVICE_CONTEXT", "repository: portable-agent/conversation-service", 'ref: ${{ steps.versions.outputs.conversation }}', "CONNECTION_SERVICE_CONTEXT", "repository: portable-agent/connection-service", 'ref: ${{ steps.versions.outputs.connection }}', "TELEGRAM_ADAPTER_CONTEXT", "repository: portable-agent/telegram-adapter", 'ref: ${{ steps.versions.outputs.telegram }}', "repository: portable-agent/test-lab", 'ref: ${{ steps.versions.outputs.test_lab }}', "start-local.ps1 -Apps", "ConnectionTest", "test:connection", "run-test-lab.ps1", "stop-local.ps1 -DeleteData", "if: always()")) {
     if ($appWorkflow -notmatch [regex]::Escape($required)) {
         throw "CI-проверка полного среза не содержит $required."
     }
@@ -394,5 +409,8 @@ if ($LASTEXITCODE -ne 0) { throw "Compose config содержит ошибку."
 & docker compose --env-file .env.example --env-file config/versions.env -f compose/compose.yaml `
     -f compose/apps.local.yaml -f compose/model.local.yaml --profile core --profile apps config --quiet
 if ($LASTEXITCODE -ne 0) { throw "Compose config локальной AI-модели содержит ошибку." }
+& docker compose --env-file .env.example --env-file config/versions.env -f compose/compose.yaml `
+    -f compose/apps.local.yaml -f compose/connection-test.local.yaml --profile core --profile apps config --quiet
+if ($LASTEXITCODE -ne 0) { throw "Compose config connection acceptance содержит ошибку." }
 Write-Host "Compose config прошёл проверку."
 

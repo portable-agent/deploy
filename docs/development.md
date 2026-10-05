@@ -22,6 +22,12 @@ Taskfile — единая точка входа. Внутренние PowerShell
 Команда `task test:model` сама поднимает этот профиль и запускает отдельный opt-in сценарий из
 `test-lab`; быстрый `task test:e2e` по-прежнему использует детерминированную demo-модель.
 
+Команда `task test:connection` поднимает приложения с override
+`compose/connection-test.local.yaml`. В нём Conversation Service предлагает только
+`google-calendar`, а Connection Service строит ссылку с тестовой OAuth-конфигурацией. Сценарий не
+обращается к Google: он проверяет контракт виджета, state, PKCE и выдачу свежей ссылки. Реальные
+credentials по-прежнему хранятся только в локальном `.env` и для этой проверки не нужны.
+
 Допустимые имена: `channel-gateway`, `conversation-service`, `agent-runtime`, `action-service`,
 `mcp-gateway`, `calendar-mcp`, `google-calendar-mcp`, `connection-service` и `telegram-adapter`.
 Неизвестное имя отклоняется до вызова Docker.

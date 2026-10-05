@@ -1,6 +1,6 @@
 param(
     [string]$TestLabPath = "",
-    [ValidateSet("test:e2e", "test:model")]
+    [ValidateSet("test:e2e", "test:model", "test:connection")]
     [string]$TaskName = "test:e2e"
 )
 

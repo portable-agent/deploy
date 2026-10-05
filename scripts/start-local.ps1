@@ -2,6 +2,7 @@
     [switch]$Observe,
     [switch]$Apps,
     [switch]$Model,
+    [switch]$ConnectionTest,
     [ValidateSet("channel-gateway", "agent-runtime", "action-service", "conversation-service", "mcp-gateway", "calendar-mcp", "google-calendar-mcp", "connection-service", "telegram-adapter")]
     [string]$Service
 )
@@ -9,6 +10,9 @@ $ErrorActionPreference = "Stop"
 if ($Apps -and $Service) { throw "Используй -Apps или -Service, но не оба параметра одновременно." }
 if ($Model -and -not ($Apps -or $Service)) {
     throw "Используй -Model вместе с -Apps или -Service."
+}
+if ($ConnectionTest -and -not ($Apps -or $Service)) {
+    throw "Используй -ConnectionTest вместе с -Apps или -Service."
 }
 . "$PSScriptRoot/local-settings.ps1"
 $envFiles = @("--env-file", ".env.example", "--env-file", "config/versions.env")
@@ -18,6 +22,7 @@ $runningOnWindows = $PSVersionTable.PSEdition -eq "Desktop" -or $IsWindows
 if ($runningOnWindows) { $composeFiles += @("-f", "compose/windows.local.yaml") }
 $appComposeFiles = @($composeFiles + @("-f", "compose/apps.local.yaml"))
 if ($Model) { $appComposeFiles += @("-f", "compose/model.local.yaml") }
+if ($ConnectionTest) { $appComposeFiles += @("-f", "compose/connection-test.local.yaml") }
 Initialize-LocalTelegramKey
 Initialize-LocalConnectionKey
 $coreProfiles = @("--profile", "core")
