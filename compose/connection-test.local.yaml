@@ -1,0 +1,15 @@
+services:
+  conversation-service:
+    environment:
+      AVAILABLE_CONNECTORS: google-calendar
+      CONNECTION_URL: http://connection-service:8080
+    depends_on:
+      connection-service:
+        condition: service_healthy
+
+  connection-service:
+    environment:
+      GOOGLE_OAUTH_ENABLED: "true"
+      GOOGLE_OAUTH_CLIENT_ID: portable-agent-connection-test
+      GOOGLE_OAUTH_CLIENT_SECRET: local-test-value-not-a-real-secret
+      GOOGLE_OAUTH_REDIRECT_URI: https://portable-agent.test/api/v1/connections/callback

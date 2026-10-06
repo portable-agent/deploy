@@ -40,6 +40,17 @@ Channel Gateway, создаёт действие со случайным `reques
 Action Service с событием в тестовом календарном коннекторе. Если `test-lab` лежит в другой папке,
 задай `TEST_LAB_PATH` в `.env`.
 
+Путь запроса подключения внешнего календаря проверяется отдельно:
+
+```powershell
+task test:connection
+```
+
+Сценарий ожидает виджет `connection` со ссылкой Google, state и PKCE. Если вместо него вернулся
+виджет подтверждения, проверь, что команда запустила `compose/connection-test.local.yaml`, а в
+Conversation Service значение `AVAILABLE_CONNECTORS` равно `google-calendar`. В чистом CI база
+Connection Service пуста; локальное уже созданное подключение может изменить ожидаемый ответ.
+
 Первый Docker build скачивает Gradle и Python packages и может быть заметно медленнее повторных
 запусков. BuildKit сохраняет слои для следующих сборок.
 

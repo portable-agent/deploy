@@ -107,6 +107,12 @@ tasks:
       - task: services:model:up
       - '{{.POWERSHELL}} {{.POWERSHELL_ARGS}} -File ./scripts/run-test-lab.ps1 -TaskName test:model'
 
+  test:connection:
+    desc: Поднять тестовый Google OAuth профиль и проверить виджет подключения
+    cmds:
+      - '{{.POWERSHELL}} {{.POWERSHELL_ARGS}} -File ./scripts/start-local.ps1 -Apps -ConnectionTest'
+      - '{{.POWERSHELL}} {{.POWERSHELL_ARGS}} -File ./scripts/run-test-lab.ps1 -TaskName test:connection'
+
   verify:
     desc: Выполнить локальные проверки конфигурации и документации
     cmds:
