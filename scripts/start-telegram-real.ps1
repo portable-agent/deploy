@@ -39,7 +39,7 @@ $composeFiles += @("-f", "compose/apps.local.yaml", "-f", "compose/telegram.real
 if ($Model) { $composeFiles += @("-f", "compose/model.local.yaml") }
 
 & docker compose @envFiles @composeFiles --profile core --profile apps --profile telegram-real `
-    up -d --no-deps --no-build --wait --force-recreate telegram-adapter cloudflared
+    up -d --no-deps --no-build --wait --force-recreate channel-gateway conversation-service telegram-adapter cloudflared
 if ($LASTEXITCODE -ne 0) { throw "Real Telegram mode did not start." }
 
 $tunnelUrl = $null

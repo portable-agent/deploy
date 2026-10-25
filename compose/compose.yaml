@@ -4,6 +4,7 @@ services:
   postgres:
     profiles: [core]
     image: ${POSTGRES_IMAGE:?set POSTGRES_IMAGE}
+    command: [postgres, -c, "max_connections=${POSTGRES_MAX_CONNECTIONS:-200}"]
     environment:
       POSTGRES_USER: ${POSTGRES_ADMIN_USER:?set POSTGRES_ADMIN_USER}
       POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?set POSTGRES_ADMIN_PASSWORD}

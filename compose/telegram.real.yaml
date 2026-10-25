@@ -1,4 +1,12 @@
 services:
+  channel-gateway:
+    environment:
+      AGENT_AVAILABLE_CONNECTORS: '["google-calendar"]'
+
+  conversation-service:
+    environment:
+      AVAILABLE_CONNECTORS: google-calendar
+
   telegram-adapter:
     environment:
       TELEGRAM_API_URL: https://api.telegram.org
