@@ -25,4 +25,7 @@ if ($LASTEXITCODE -ne 0) { throw "Failed to stop the temporary Telegram webhook.
 
 & "$PSScriptRoot/service-local.ps1" -Action Restart -Service telegram-adapter
 if ($LASTEXITCODE -ne 0) { throw "Failed to return Telegram Adapter to the fake API." }
+& docker compose @envFiles @composeFiles --profile apps up -d --no-deps --no-build --wait --force-recreate `
+    channel-gateway conversation-service
+if ($LASTEXITCODE -ne 0) { throw "Failed to return the calendar route to the fake API." }
 Write-Host "The temporary webhook was removed. Telegram Adapter uses the fake API again."

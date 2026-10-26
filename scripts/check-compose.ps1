@@ -331,6 +331,10 @@ foreach ($required in @("TELEGRAM_REAL_BOT_TOKEN", "TELEGRAM_REAL_WEBHOOK_SECRET
         throw "Real Telegram override не содержит $required."
     }
 }
+if ($realTelegram -notmatch '(?ms)^  channel-gateway:\s+environment:\s+AGENT_AVAILABLE_CONNECTORS: ''\["google-calendar"\]''' `
+    -or $realTelegram -notmatch '(?ms)^  conversation-service:\s+environment:\s+AVAILABLE_CONNECTORS: google-calendar') {
+    throw "Реальный Telegram должен направлять предложения и проверку подключения в Google Calendar."
+}
 $realTelegramScript = Get-Content -Raw -LiteralPath "scripts/start-telegram-real.ps1"
 $envExample = Get-Content -Raw -LiteralPath ".env.example"
 foreach ($required in @("getMe", "setWebhook", "getWebhookInfo", "trycloudflare", "allowed_updates", "callback_query")) {
@@ -354,13 +358,16 @@ if ($realTelegramScript -notmatch '\[switch\]\$Model' `
     -or $realTelegramScript -notmatch 'compose/model.local.yaml') {
     throw "Настоящий Telegram должен поддерживать тот же локальный AI-профиль."
 }
-if ($realTelegramScript -match 'up -d --build --wait --force-recreate telegram-adapter cloudflared' `
-    -or $realTelegramScript -notmatch 'up -d --no-deps --no-build --wait --force-recreate telegram-adapter cloudflared') {
-    throw "Повторный запуск Telegram не должен пересобирать уже поднятые приложения."
+if ($realTelegramScript -match 'up -d --build --wait --force-recreate' `
+    -or $realTelegramScript -notmatch 'up -d --no-deps --no-build --wait --force-recreate channel-gateway conversation-service telegram-adapter cloudflared') {
+    throw "Запуск реального Telegram должен переключать маршрут Google без пересборки приложений."
 }
 $stopTelegramScript = Get-Content -Raw -LiteralPath "scripts/stop-telegram-real.ps1"
 if ($stopTelegramScript -notmatch 'deleteWebhook') {
     throw "Остановка настоящего Telegram должна удалить временный webhook."
+}
+if ($stopTelegramScript -notmatch '(?s)up -d --no-deps --no-build --wait --force-recreate\s+`\s+channel-gateway conversation-service') {
+    throw "Остановка настоящего Telegram должна вернуть тестовый маршрут календаря."
 }
 $taskfile = Get-Content -Raw -LiteralPath "Taskfile.yml"
 foreach ($taskName in @("services:model:up", "telegram:real:up", "telegram:real:model:up", "telegram:real:down")) {
