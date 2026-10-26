@@ -10,6 +10,7 @@ nav:
   - Разработка: development.md
   - Новый сервис: new-service.md
   - Эксплуатация: runbook.md
+  - Проверка Google Calendar 2026-10-26: checkpoint-2026-10-26.md
   - Решения:
       - Отдельный deploy-репозиторий: decisions/0001-deploy-repository.md
       - Платформа разработки: decisions/0002-developer-platform.md
