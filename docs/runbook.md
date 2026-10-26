@@ -63,6 +63,17 @@ Connection Service пуста; локальное уже созданное по
    а запрашивает короткоживущий access token у Connection Service.
 5. Не включай Google credentials в `.env.example`, Compose или GitHub Actions.
 
+## Telegram не отвечает
+
+1. Проверь `task status` и логи `cloudflared` в своём Compose-проекте. Контейнер может быть запущен,
+   хотя туннель уже недействителен: признак — `Unauthorized: Tunnel not found`.
+2. Выполни `task telegram:real:up`. Команда пересоздаёт временный туннель, проверяет его HTTP-адрес,
+   регистрирует webhook у Telegram и сверяет его через `getWebhookInfo`.
+3. Если Telegram сообщает `Failed to resolve host`, подожди распространения нового DNS-имени и
+   повтори команду. Для разработки можно пользоваться fake Telegram через `task service:up
+   SERVICE=telegram-adapter`.
+4. Не публикуй bot token, secret token и полный URL с токеном из вызовов Bot API в тикетах и логах.
+
 ## Preview smoke не запускается
 
 1. Выполни `task doctor`, затем проверь `helm version`, `kubectl version --client` и `k3d version`.
