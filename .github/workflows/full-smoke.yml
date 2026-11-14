@@ -14,7 +14,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
-      - uses: azure/setup-helm@v5.0.1
+      - uses: azure/setup-helm@v5.1.0
         with:
           version: v4.2.4
       - name: Установить k3d
